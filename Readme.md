@@ -10,5 +10,25 @@ The directory [msu-2016](#msu-2016) contains a revamped, all Python-ic version o
 
 **Note**: The sigir-2015 version and the msu-2106 version of the code produce minute differences in the results. This is mainly due to the differences in the production of random deviates from distributions using R vs using Python-numpy.
 
+### Directory Layout
+```
+├── data
+│   └── ts-2013
+│       ├── qrels
+│       ├── submitted-runs
+│       └── update-lengths
+├── msu-2016
+└── sigir-2015
+```
+
+```data```: contains (or should contain) track specific data (qrels and runs) as well as data required for MSU evaluation (sentence lengths).
+
+```sigir-2015```: contains code written for the MSU paper (see [sigir-2015](#sigir-2015)).
+
+```msu-2016```: contains all python-c code forMSU (see [msu-2015](#msu-2015)). 
+
+## sigir-2015
+
+
 ## Change log
 2016-10-20  |  starting new github repo for MSU  
