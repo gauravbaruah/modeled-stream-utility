@@ -19,12 +19,6 @@ Modeled Stream Utility (MSU) measures the utility of a stream of information in 
 MSU models the stream browsing behavior of users and computes gain (the amount of relevant information read) based on the content read by respective user. 
 The MSU user model allows simulation of user having various characteristics of stream browsing behavior. This allows us to evaluate the utility  of information streams for various types of users.
 
-The directory [sigir-2015](#sigir-2015) contains code for the paper [Evaluating Streams of Evolving News Events, SIGIR 2015] (https://cs.uwaterloo.ca/~gbaruah/baruah-et-al-sigir-2015.pdf). This code only supports evaluation of the Temporal Summarization 2013 track. It was developed using a mix of ```R``` and ```Python``` scripts.
-
-The directory [msu-2016](#msu-2016) contains a revamped, all Python-ic version of the MSU code. This version also supports MSU evaluation of both, the Temporal Summarization 2013 and 2014 tracks. 
-
-**Note**: The sigir-2015 version and the msu-2106 version of the code produce minute differences in respective results. This is mainly due to the differences in sampling of random deviates from distributions by ```R``` and ```Python-numpy```.
-
 ### Directory Layout
 ```
 ├── data
@@ -36,11 +30,15 @@ The directory [msu-2016](#msu-2016) contains a revamped, all Python-ic version o
 └── sigir-2015
 ```
 
-```data```: contains (or should contain) track specific data (qrels and runs) as well as data required for MSU evaluation (sentence lengths).
+The directory ```data``` contains (or should contain) track specific data (qrels and runs) as well as data required for MSU evaluation (sentence lengths).
 
-```sigir-2015```: contains code written for the MSU paper (see [sigir-2015](#sigir-2015)).
 
-```msu-2016```: contains all python-ic code forMSU (see [msu-2015](#msu-2015)). 
+The directory [sigir-2015](#sigir-2015) contains code for the paper [Evaluating Streams of Evolving News Events, SIGIR 2015] (https://cs.uwaterloo.ca/~gbaruah/baruah-et-al-sigir-2015.pdf). This code only supports evaluation of the Temporal Summarization 2013 track. It was developed using a mix of ```R``` and ```Python``` scripts.
+
+The directory [msu-2016](#msu-2016) contains a revamped, all Python-ic version of the MSU code. This version also supports MSU evaluation of both, the Temporal Summarization 2013 and 2014 tracks. 
+
+**Note**: The sigir-2015 version and the msu-2106 version of the code produce minute differences in respective results. This is mainly due to the differences in sampling of random deviates from distributions by ```R``` and ```Python-numpy```.
+
 
 ## sigir-2015
 
@@ -71,7 +69,28 @@ for run in `ls ../data/ts-2013/submitted-runs/input*`; do rbase=`basename $run`;
 
 #### Generate trails of user behavior
 
+We generate time-trails of users alternating between times spent reading and times spent away from the system.
 
+```
+mkdir data/ts-2013/simulation-data;
+
+cd sigir-2015;
+
+Rscript generate.time.trails.R 10800 5400 120 60 ../data/ts-2013/simulation-data 0 1000
+```  
+
+With the above arguments ```generate.time.trails.R``` simulates a user population that 
+
+- on average spends 3 hours (with std.dev. 1.5 hours) away from the system,
+- on average spends 2 minutes (with std.dev. 1 minute) reading updates,
+- assigns the population an id of ```0```,
+- simulates 1000 users from the population.
+
+Note that this parameters are for the so called "_reasonable users_" (section 4.2 in the
+[MSU paper](https://cs.uwaterloo.ca/~gbaruah/baruah-et-al-sigir-2015.pdf)).
+
+
+#### Evaluate systems using MSU
 
 To compute Modeled Stream Utility all for gain-attached-runs: 
 ```
