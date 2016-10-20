@@ -284,7 +284,7 @@ if __name__ == "__main__":
     ap.add_argument("runfiles", nargs="+", help="all the run with gain attached files")
     #ap.add_argument("topic_query_durns", help="file containing list of topic query-durations")
     #ap.add_argument("update_lengths_folder", help="folder containing files containing update lengths")
-    ap.add_argument("--discount", help="specific discount value", type=float)
+    ap.add_argument("--discount", help="specific discount value. (produces multiple outputs based on discounts by default).", type=float)
     
     args = ap.parse_args()
     print >> sys.stderr, args
