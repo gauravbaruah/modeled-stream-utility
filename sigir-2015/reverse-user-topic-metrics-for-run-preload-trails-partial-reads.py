@@ -1,6 +1,6 @@
 # computes user performance on every topic for run, for every user
 
-# DONE do this for Gb and GBd metrics first
+# DONE do this for Gb and MSU metrics first
 
 
 import argparse
@@ -85,10 +85,10 @@ def computeMetrics(run, user_sessions, user_ssn_starts, user_speed, runname, dis
         #print len(topic_upd_times[qid])
         
     num_discounts = len(discounts)
-    mean_avg_Gbd = np.zeros(num_discounts, dtype=float) 
-    mean_avg_Gbd_per_updRead = np.zeros(num_discounts, dtype=float) 
-    mean_avg_Gbd_per_updInRun = np.zeros(num_discounts, dtype=float)
-    mean_avg_Gbd_per_sec = np.zeros(num_discounts, dtype=float) 
+    mean_avg_MSU = np.zeros(num_discounts, dtype=float) 
+    mean_avg_MSU_per_updRead = np.zeros(num_discounts, dtype=float) 
+    mean_avg_MSU_per_updInRun = np.zeros(num_discounts, dtype=float)
+    mean_avg_MSU_per_sec = np.zeros(num_discounts, dtype=float) 
 
     for uid in user_speed:
         #load user time trail keeping arrival and duration
@@ -110,10 +110,10 @@ def computeMetrics(run, user_sessions, user_ssn_starts, user_speed, runname, dis
         #ssn_starts = [ssn.start for ssn in sessions]
         
         #user performance metrics per query
-        avg_Gbd = np.zeros(num_discounts, dtype=float) 
-        avg_Gbd_per_updRead = np.zeros(num_discounts, dtype=float) 
-        avg_Gbd_per_updInRun = np.zeros(num_discounts, dtype=float) 
-        avg_Gbd_per_sec = np.zeros(num_discounts, dtype=float) 
+        avg_MSU = np.zeros(num_discounts, dtype=float) 
+        avg_MSU_per_updRead = np.zeros(num_discounts, dtype=float) 
+        avg_MSU_per_updInRun = np.zeros(num_discounts, dtype=float) 
+        avg_MSU_per_sec = np.zeros(num_discounts, dtype=float) 
         
         for qid in sorted(run.keys()):
             if qid == 7: continue
@@ -127,10 +127,10 @@ def computeMetrics(run, user_sessions, user_ssn_starts, user_speed, runname, dis
             #  gain, alpha, tws, and all other metrics
             
             #add graded metrics later
-            Gbd = np.zeros(num_discounts, dtype=float) 
-            Gbd_per_updRead = np.zeros(num_discounts, dtype=float) 
-            Gbd_per_updInRun = np.zeros(num_discounts, dtype=float) 
-            Gbd_per_sec = np.zeros(num_discounts, dtype=float) 
+            MSU = np.zeros(num_discounts, dtype=float) 
+            MSU_per_updRead = np.zeros(num_discounts, dtype=float) 
+            MSU_per_updInRun = np.zeros(num_discounts, dtype=float) 
+            MSU_per_sec = np.zeros(num_discounts, dtype=float) 
             num_upd_read = 0 
             tspent = 0.0
             
@@ -177,8 +177,8 @@ def computeMetrics(run, user_sessions, user_ssn_starts, user_speed, runname, dis
                         alpha = 0 if alpha < 0 else alpha
                         #print qid, ngt, alpha
                         for d in xrange(num_discounts):
-                            Gbd[d] += (discounts[d] ** alpha)              
-                    #logger.debug('msu = {}'.format(Gbd[d]))      
+                            MSU[d] += (discounts[d] ** alpha)              
+                    #logger.debug('msu = {}'.format(MSU[d]))      
                     i -= 1
                 
                 if partial_upd_idx == latest_upd_idx: #could not completely read the first update in this ssn
@@ -187,67 +187,67 @@ def computeMetrics(run, user_sessions, user_ssn_starts, user_speed, runname, dis
                     last_read_upd_idx = latest_upd_idx
                 tspent += reading_time #for this session                
                 
-            avg_Gbd += Gbd  
+            avg_MSU += MSU  
                       
-            Gbd_per_updRead = (Gbd/float(num_upd_read)) if num_upd_read > 0 else np.zeros(num_discounts, dtype=float)
-            avg_Gbd_per_updRead += Gbd_per_updRead
+            MSU_per_updRead = (MSU/float(num_upd_read)) if num_upd_read > 0 else np.zeros(num_discounts, dtype=float)
+            avg_MSU_per_updRead += MSU_per_updRead
             # TODO: it may also happen that the updates are too long to be read in one session.
             # This will always lead to zero updates being read
             #~ try:
-                #~ avg_Gbd_per_updRead += (Gbd/float(num_upd_read))
+                #~ avg_MSU_per_updRead += (MSU/float(num_upd_read))
             #~ except:
-                #~ print Gbd, num_upd_read, tspent
+                #~ print MSU, num_upd_read, tspent
                 #~ print [ (ssn.start, ssn.time_spent) for ssn in sessions ]
                 #~ print user_speed[uid]
                 #~ print [ (upd.time, upd.wlen, upd.wlen/user_speed[uid]) for upd in updates ]
                 #~ exit()
                 
             num_upd_inRun = len(updates)
-            Gbd_per_updInRun = (Gbd/float(num_upd_inRun))
-            avg_Gbd_per_updInRun += Gbd_per_updInRun
+            MSU_per_updInRun = (MSU/float(num_upd_inRun))
+            avg_MSU_per_updInRun += MSU_per_updInRun
 	    
-            Gbd_per_sec = (Gbd/tspent) if tspent > 0 else np.zeros(num_discounts, dtype=float)
+            MSU_per_sec = (MSU/tspent) if tspent > 0 else np.zeros(num_discounts, dtype=float)
             #~ try:
-                #~ Gbd_per_sec = (Gbd/tspent)
+                #~ MSU_per_sec = (MSU/tspent)
             #~ except:
-                #~ print Gbd, num_upd_read, tspent
+                #~ print MSU, num_upd_read, tspent
                 #~ print [ (ssn.start, ssn.time_spent, ssn.time_away) for ssn in sessions ]
                 #~ print user_speed[uid]
                 #~ print [ (upd.time, upd.wlen, upd.wlen/user_speed[uid]) for upd in updates ]
                 #~ exit()		
-            avg_Gbd_per_sec += Gbd_per_sec
+            avg_MSU_per_sec += MSU_per_sec
             #print uid, qid, gain_bin, gain_bin_disc
             
             nuggets_seen = ' '.join([k+','+str(v) for k, v in already_seen_ngts.items()])
             
             for d in xrange(num_discounts):
-                print >> outuserperf[d], '\t'.join([str(x) for x in [runname, uid, qid, Gbd[d], Gbd_per_updRead[d], Gbd_per_updInRun[d], Gbd_per_sec[d], num_upd_read, num_upd_inRun, tspent, nuggets_seen]])
+                print >> outuserperf[d], '\t'.join([str(x) for x in [runname, uid, qid, MSU[d], MSU_per_updRead[d], MSU_per_updInRun[d], MSU_per_sec[d], num_upd_read, num_upd_inRun, tspent, nuggets_seen]])
         
         num_topics =  len(run.keys()) - 1 #9;  # some runs have only 9 topics so len(run.keys() -1 is wrong
         #logger.debug('run keys ' + str(run.keys()))
-        avg_Gbd /= num_topics
-        avg_Gbd_per_updRead /= num_topics
-        avg_Gbd_per_updInRun /= num_topics
-        avg_Gbd_per_sec /= num_topics
-        #print uid, qid, avg_Gbd, avg_Gbd_per_updRead, avg_Gbd_per_updInRun, avg_Gbd_per_sec
+        avg_MSU /= num_topics
+        avg_MSU_per_updRead /= num_topics
+        avg_MSU_per_updInRun /= num_topics
+        avg_MSU_per_sec /= num_topics
+        #print uid, qid, avg_MSU, avg_MSU_per_updRead, avg_MSU_per_updInRun, avg_MSU_per_sec
         
-        mean_avg_Gbd += avg_Gbd
-        mean_avg_Gbd_per_updRead += avg_Gbd_per_updRead
-        mean_avg_Gbd_per_updInRun+= avg_Gbd_per_updInRun
-        mean_avg_Gbd_per_sec += avg_Gbd_per_sec        
+        mean_avg_MSU += avg_MSU
+        mean_avg_MSU_per_updRead += avg_MSU_per_updRead
+        mean_avg_MSU_per_updInRun+= avg_MSU_per_updInRun
+        mean_avg_MSU_per_sec += avg_MSU_per_sec        
         
         # logger.warning('breaking MSU after users. TODO: remove this')
         # if uid == 2:
         #     break
         
     
-    mean_avg_Gbd /= 1000
-    mean_avg_Gbd_per_updRead /= 1000
-    mean_avg_Gbd_per_updInRun /= 1000
-    mean_avg_Gbd_per_sec /= 1000
+    mean_avg_MSU /= 1000
+    mean_avg_MSU_per_updRead /= 1000
+    mean_avg_MSU_per_updInRun /= 1000
+    mean_avg_MSU_per_sec /= 1000
     
     for d in xrange(num_discounts):    
-        print >> outmeanperf[d], '\t'.join([str(x) for x in [ runname, mean_avg_Gbd[d], mean_avg_Gbd_per_updRead[d], mean_avg_Gbd_per_updInRun[d], mean_avg_Gbd_per_sec[d]]])
+        print >> outmeanperf[d], '\t'.join([str(x) for x in [ runname, mean_avg_MSU[d], mean_avg_MSU_per_updRead[d], mean_avg_MSU_per_updInRun[d], mean_avg_MSU_per_sec[d]]])
 
 def load_gain_attached_run(run_gain_file, run):
     
@@ -338,8 +338,8 @@ if __name__ == "__main__":
         print >> sys.stderr, outfnamepre
         outuserperf.append(open(outfnamepre + "user.metrics", 'w'))
         outmeanperf.append(open(outfnamepre + "mean.metrics", 'w'))
-        print >> outmeanperf[d], 'runname\tGbd\tGbd_per_updRead\tGbd_per_updInRun\tGbd_per_sec' 
-        print >> outuserperf[d], 'runname\tuid\tqid\tGbd\tGbd_per_updRead\tGbd_per_updInRun\tGbd_per_sec\tnum_upd_read\tnum_upd_inRun\ttspent\tnuggets_alpha' 
+        print >> outmeanperf[d], 'runname\tMSU\tMSU_per_updRead\tMSU_per_updInRun\tMSU_per_sec' 
+        print >> outuserperf[d], 'runname\tuid\tqid\tMSU\tMSU_per_updRead\tMSU_per_updInRun\tMSU_per_sec\tnum_upd_read\tnum_upd_inRun\ttspent\tnuggets_alpha' 
         #paramid += 324
         paramid += 54  #for reasonable
         outfnamepre = os.path.join(outdir, str(paramid) + ".")
@@ -361,7 +361,7 @@ if __name__ == "__main__":
         outuserperf[d].close()
         outmeanperf[d].close()
     
-    print >> sys.stderr, 'output files are:'
+    print >> sys.stderr, '\noutput files are:'
     print >> sys.stderr, '\n'.join([ f.name for f in outmeanperf])    
         
         

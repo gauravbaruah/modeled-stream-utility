@@ -9,7 +9,7 @@ spending some time browsing results, in order to keep abreast of an evolving
 news event, such as hurricanes, sporting events, protests and other events,
 where new facts of information come to light as the situation evolves.
 
-MSU essentially models a user as alternating between time intervals spent reading updates and time intervals spent away from the stream.
+MSU essentially models a user as alternating between time intervals spent reading updates (sessions) and time intervals spent away from the stream.
 The duration of respective time intervals depends on the browsing characteristics of the user. For instance, a highly interested user may read updates with shorter intervals of time spent away from the system. A busy user may spend longer durations away from the system 
 (see ["Evaluating Streams of Evolving News Events", Gaurav Baruah, Mark
 Smucker, Charles Clarke, _SIGIR
@@ -53,7 +53,7 @@ The directory [msu-2016](#msu-2016) contains a revamped, all Python-ic version o
 
 ### Running the Evaluation
 
-#### Annotate submitted updates with contained nuggets
+#### 1. Annotate submitted updates with contained nuggets
 MSU requires that for the evaluation of a system, the system output be annotated by contained nuggets (see ```sigir-2015/attach-gain-to-run.py```).
 
 ```sigir-2015/attach-gain-to-run.py``` annotates systems' output for the TS 2013's participating systems. (MSU input format is also described in this script).
@@ -67,7 +67,7 @@ cd sigir-2015;
 for run in `ls ../data/ts-2013/submitted-runs/input*`; do rbase=`basename $run`; python attach-gain-to-run.py ../data/ts-2013/qrels/matches.tsv ../data/ts-2013/qrels/nuggets.tsv ../data/ts-2013/qrels/pooled_updates.tsv ../data/ts-2013/topic_query_durations ../data/ts-2013/update-lengths $run ../data/ts-2013/gain-attached-runs/$rbase.with.gain; done
 ```
 
-#### Generate trails of user behavior
+#### 2. Generate trails of user behavior
 
 We generate time-trails of users alternating between times spent reading and times spent away from the system.
 
@@ -86,27 +86,31 @@ With the above arguments ```generate.time.trails.R``` simulates a user populatio
 - assigns the population an id of ```0```,
 - simulates 1000 users from the population.
 
-Note that this parameters are for the so called "_reasonable users_" (section 4.2 in the
+Note that these parameters are for the so called "_reasonable users_" (section 4.2 in the
 [MSU paper](https://cs.uwaterloo.ca/~gbaruah/baruah-et-al-sigir-2015.pdf)).
 
 
-#### Evaluate systems using MSU
+```generate.time.trails.R``` produces:
 
-To compute Modeled Stream Utility all for gain-attached-runs: 
+- ```simulation-data/0.user.params``: file containing mean time session time and mean  away time for 1000 users, one user on each line
+- ```simulation-data/0.time-trails/```: directory containing one file per user; each file containing exact durations of session and away times.
+
+
+#### 3. Evaluate systems using MSU
+
+To compute Modeled Stream Utility for all gain-attached-runs:
 ```
-time python modeled_stream_utility.py 1000 120 60 10800 5400 0.5 ../data/gain-attached-runs/input.run* > runs.msu
+cd sigir-2015;
+
+python reverse-user-topic-metrics-for-run-preload-trails-partial-reads.py ../data/ts-2013/simulation-data/0.user.params ../data/ts-2013/simulation-data/0.time-trails/ --discount 0.5 ../data/ts-2013/gain-attached-runs/input.*
 ```
-Parameters (for "_reasonable users_" [section 4.2 in the
-[paper](https://cs.uwaterloo.ca/~gbaruah/baruah-et-al-sigir-2015.pdf)] in the
-above command are:
 
--  1000 users
--  120 seconds population mean session duration
--  60 seconds population session duration standard deviation
--  3 hours (10800 seconds) population mean time away
--  1.5 hours (5400 seconds) population time away standard deviation
--  0.5 latency decay for population 
+The above command produces and output file ```../data/ts-2013/simulation-data/0.mean.metrics``` containing MSUs for each run.
 
+The discount parameter is specific to the _"reasonable users"_ (section 4.2 in the
+[MSU paper](https://cs.uwaterloo.ca/~gbaruah/baruah-et-al-sigir-2015.pdf)).
+
+**Note**: It is recommended that the ```--discount``` option be provided to the program otherwise multiple output files will be created; separate population ids will be assigned for each output file corresponding to an element in the discount vector [0.1, 0.25. 0.5, 0.75, 0.9, 0, 1]) . 
 
 ## msu-2016
 
