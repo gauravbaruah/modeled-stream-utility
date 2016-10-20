@@ -24,8 +24,7 @@ The MSU user model allows simulation of user having various characteristics of s
 ├── data
 │   └── ts-2013
 │       ├── qrels
-│       ├── submitted-runs
-│       └── update-lengths
+│       └── ...
 ├── msu-2016
 └── sigir-2015
 ```
@@ -33,24 +32,11 @@ The MSU user model allows simulation of user having various characteristics of s
 The directory ```data``` contains (or should contain) track specific data (qrels and runs) as well as data required for MSU evaluation (sentence lengths).
 
 
-The directory [sigir-2015](#sigir-2015) contains code for the paper [Evaluating Streams of Evolving News Events, SIGIR 2015] (https://cs.uwaterloo.ca/~gbaruah/baruah-et-al-sigir-2015.pdf). This code only supports evaluation of the Temporal Summarization 2013 track. It was developed using a mix of ```R``` and ```Python``` scripts.
+The directory [sigir-2015](sigir-2015/Readme.md) contains code for the paper [Evaluating Streams of Evolving News Events, SIGIR 2015] (https://cs.uwaterloo.ca/~gbaruah/baruah-et-al-sigir-2015.pdf). This code only supports evaluation of the Temporal Summarization 2013 track. It was developed using a mix of ```R``` and ```Python``` scripts.
 
-The directory [msu-2016](#msu-2016) contains a revamped, all Python-ic version of the MSU code. This version also supports MSU evaluation of both, the Temporal Summarization 2013 and 2014 tracks. 
+The directory [msu-2016](msu-2016/Readme.md) contains a revamped, all Python-ic version of the MSU code (**MAIN CODEBASE**). This version also supports MSU evaluation of both, the Temporal Summarization 2013 and 2014 tracks. 
 
 **Note**: The sigir-2015 version and the msu-2106 version of the code produce minute differences in respective results. This is mainly due to the differences in sampling of random deviates from distributions by ```R``` and ```Python-numpy```.
-
-
-## msu-2016
-
-#### Software dependencies
-1. [python-numpy](http://www.numpy.org/)
-
-This code has been developed using a virtualenv with a numpy install.
-
-1. Create a python [virtualenv](https://virtualenv.pypa.io/en/latest/)
-2. ```source [your-virtual-env]/bin/activate```
-3. ```pip install numpy```
-4. run commands
 
 ## Change log
 2016-10-20  |  starting new github repo for MSU  

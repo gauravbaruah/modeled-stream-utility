@@ -4,7 +4,7 @@
 #### Software dependencies
 1. [R](https://www.r-project.org/) 
 
-### Requirements
+### Data Requirements
 
 1. Temporal Summarization 2013 qrels (present in ```data/ts-2013/qrels```)
 2. Temporal Summarization 2013 submitted runs (download from [TREC](trec.nist.gov) into ```data/ts-2013/submitted-runs```).
