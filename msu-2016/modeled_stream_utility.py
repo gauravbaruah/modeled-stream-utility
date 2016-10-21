@@ -59,6 +59,9 @@ class ModeledStreamUtility(object):
 
     @staticmethod
     def load_run_and_attach_gain(runfile, updlens, matches, useAverageLengths, track, query_durns):
+        """
+        This function attaches gain (nuggets) to sentences of a run, on the fly
+        """
         run = {}        
         with open(runfile) as rf:
             for line in rf:
