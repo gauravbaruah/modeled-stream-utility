@@ -55,7 +55,7 @@ def read_in_nuggets(nuggets_file, query_durns):
                 nuggets[query_id][nugget_id] = (int(importance), float(timestamp) - query_durns[query_id][0])
     return nuggets
     
-def read_in_update_lengths(update_lengths_folder, track):
+def read_in_update_lengths(update_lengths_folder, track="ts13"):
     updlens = {}
     
     for lenfile in os.listdir(update_lengths_folder):
