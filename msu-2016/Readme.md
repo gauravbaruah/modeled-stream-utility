@@ -52,14 +52,15 @@ python modeled_stream_utility.py ts13 ../data/ts-2013/qrels/matches.tsv ../data/
 cat msu2016-code.ts2013.results.all | grep AVG | gawk '{print $1, $3}' | sed 's_^input.__g' > msu2016-code.ts2013.results.avg
 ```
 
-The ```msu2016-code.ts2013.results.avg``` file will contain the average MSU scores for the TS 2013 runs.
+The ```msu2016-code.ts2013.results.avg``` file will contain the average MSU scores for the TS 2013 runs; MSU is computed for each system by simulating 1000 "reasonable" users with the user population having the parameters 2 ± 1 minute for reading sessions and 3 ± 1.5 hours spent away from the system with a latenes decay parameter 0.5. 
 
 #### TS 2014
 
 ```
 cd msu-2016;
 
-
+python modeled_stream_utility.py ts14 ../data/ts-2014/qrels/matches.tsv ../data/ts-2014/qrels/nuggets.tsv ../data/ts-2014/qrels/updates_sampled.tsv ../data/ts-2014/qrels/trec2014-ts-topics-test.xml ../data/ts-2014/update-lengths/ 1000 120 60 10800 5400 0.5 ../data/ts-2014/submitted-runs/* > msu2016-code.ts2014.results.all
+```
 
 
 ### Codebase-comparison
