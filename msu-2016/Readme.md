@@ -40,8 +40,6 @@ Files for comparing msu-2016 and sigir-2015 codebases (see [codebase-comparison]
 
 ### Running the Evaluation
 
-TODO: run the new code; produce results; compute Kendall's tau
-
 #### TS 2013
 
 ```
