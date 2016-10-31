@@ -22,9 +22,15 @@ The MSU user model allows simulation of user having various characteristics of s
 ### Directory Layout
 ```
 ├── data
-│   └── ts-2013
+│   ├── ts-2013
+│   │   ├── qrels
+│   │   ├── submitted-runs
+|   |   ├── update-lengths
+│   │   └── ...
+│   └── ts-2014
 │       ├── qrels
-│       └── ...
+│       ├── submitted-runs
+│       └── update-lengths
 ├── msu-2016
 └── sigir-2015
 ```
