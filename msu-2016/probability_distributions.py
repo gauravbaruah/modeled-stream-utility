@@ -31,6 +31,33 @@ class Exponential(object):
         return numpy.random.exponential(size=num_samples, scale=self.scale_param_lambda)
 
 
+class Beta(object):
+    """
+    Random samples from an Beta probability distribution parameterized
+    by alpha and beta. 
+    ::note:: scale parameter is 1/rate parameter
+    """
+
+    def __init__(self, alpha, beta):
+        self.shape_param_alpha = float(alpha)
+        self.shape_param_beta = float(beta)
+
+    def get_random_sample(self):
+        """
+        return: a single random sample from this beta distribution
+        """
+        
+        return numpy.random.beta(self.shape_param_alpha, self.shape_param_beta, size=None)
+
+    def get_random_samples(self, num_samples):
+        """
+        return: a list of num_samples random samples from this beta
+        distribution
+        """
+        
+        return numpy.random.beta(self.shape_param_alpha, self.shape_param_beta, size=num_samples)
+
+
 class Lognormal(object):
     """
     Random samples from a Lognormal probability distribution parameterized by
@@ -88,15 +115,23 @@ if __name__ == "__main__":
     #print randlognorm
     #print sum(randlognorm)/100
 
-    decay = float(sys.argv[1])
+    # decay = float(sys.argv[1])
 
-    exponential = Exponential(2)
+    # exponential = Exponential(2)
 
-    for x in xrange(10):
-        print exponential.get_random_sample()
+    # for x in xrange(10):
+    #     print exponential.get_random_sample()
 
-    randexp = exponential.get_random_samples(10)
-    print randexp
-    print sum(randexp)/10
+    # randexp = exponential.get_random_samples(10)
+    # print randexp
+    # print sum(randexp)/10
    
     
+    a, b = float(sys.argv[1]), float(sys.argv[2])
+    beta = Beta(a, b)
+
+    for x in xrange(10):
+        print beta.get_random_sample()
+
+    randbeta = beta.get_random_samples(10)
+    print randbeta

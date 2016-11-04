@@ -63,6 +63,7 @@ if __name__ == '__main__':
         help="models the spread of \"reading persistence\" across the user population via a beta distribution")
     ap.add_argument("--window_size", type=int, default=86400, help="updates older than window_size from current session will not be shown to user (window_size = -1 --> all updates since start of query duration will be shown)")
     ap.add_argument("runfiles", nargs="+")
+    ap.add_argument("--fix_persistence", nargs=1, type=float)
 
     # NOTE: population reading speed parameters drawn from [Time Well Spent,
     # Clarke and Smucker, 2014]
@@ -102,6 +103,9 @@ if __name__ == '__main__':
             args.RBP_persistence,
             args.population_time_away_mean, args.population_time_away_stddev,
             args.lateness_decay)
+    
+    if args.fix_persistence:
+        MSU.fix_persistence_for_user_population(args.fix_persistence)
 
     run = {}
     for runfile in args.runfiles:

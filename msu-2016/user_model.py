@@ -124,35 +124,97 @@ class UserModel(object):
     # user can read presented updates in order OR out-of-order depending on
     # behavior model. a la EGU???
 
+class LognormalAwayRBPPersistenceUserModel(object):
+    """
+    A user that alternates between 
+    - spending time with the system reading updates
+    - spending time away from the system A
+    The number of updates read by a user at each session is determined by 
+    P the persistence of the user [Moffal, TOIS 2008].
+    Additionally, each user has 
+    - a specific reading speed V
+    - a specific discount L for late reported information (For some users,
+      relevance value of information may reduce with the passage of time. e.g.
+      critical information is desired earlier rather than later.)
+    Given A, P, V, L we can simulate a user browsing a stream of updates when updates are
+    presented in a ranked order at every session.
+    """
 
+    def __init__ (self, mean_time_away_A, persistence_P, reading_speed_V, lateness_decay_L):
+        self.A = float(mean_time_away_A)
+        self.P = float(persistence_P)
+        self.V = float(reading_speed_V)
+        self.L = float(lateness_decay_L)
+
+        self.A_exp = Exponential(self.A)
+
+        self.session_away_durations = []
+
+    def __repr__(self):
+        return str ({
+                'A': self.A,
+                'P': self.P,
+                'V': self.V,
+                'L': self.L,
+            })
+
+
+    def get_next_time_away_duration(self, current_time=None, query_duration=None):
+        """
+        returns a single time away duration
+        if current_time and query_duration are specified, the generated
+            time away length is truncated if it exceeds the query_duration
+        else
+            a single duration is returned
+        """
+        duration = self.A_exp.get_random_sample()
+        if current_time and query_duration:
+            current_time = float(current_time)
+            query_duration = float(query_duration)
+            if current_time + duration > query_duration:
+                duration = query_duration - current_time
+        return duration
 
 
 if __name__ == "__main__":
 
     numpy.random.seed(1)
     
-    D, A, V, L = [float(arg) for arg in sys.argv[1:] ]
-
-    user = UserModel(A, D, V, L)
-    tups = user.generate_session_away_lengths(24*3600)
-    #tups = [ t for t in user.generate_session_away_lengths(24*3600) ]
-
-    print '\n'.join( [ str(t) for t in tups] )
-    print numpy.mean([ t[0] for t in tups] )
-    print numpy.mean([ t[1] for t in tups] )
-
-    print user
-    numpy.random.seed(1)
+    
+    user = LognormalAwayRBPPersistenceUserModel(200, 0.5, 1.25, 0.5)
 
     current_time = 0
-    qdurn = 24*3600
+    qdurn = 60 * 60
     while current_time < qdurn:
-        ssndurn = user.get_next_session_duration(current_time, qdurn)
+        ssndurn = 60
         current_time += ssndurn
-        if current_time >= qdurn:
-            break
+        if current_time > qdurn: break
         awaydurn = user.get_next_time_away_duration(current_time, qdurn)
         current_time += awaydurn
-        print ssndurn, awaydurn
+        print ssndurn, awaydurn, current_time
+
+    # D, A, V, L = [float(arg) for arg in sys.argv[1:] ]
+
+    # user = UserModel(A, D, V, L)
+    # tups = user.generate_session_away_lengths(24*3600)
+    # #tups = [ t for t in user.generate_session_away_lengths(24*3600) ]
+
+    # print '\n'.join( [ str(t) for t in tups] )
+    # print numpy.mean([ t[0] for t in tups] )
+    # print numpy.mean([ t[1] for t in tups] )
+
+    # print user
+    # numpy.random.seed(1)
+
+    # current_time = 0
+    # qdurn = 24*3600
+    # while current_time < qdurn:
+    #     ssndurn = user.get_next_session_duration(current_time, qdurn)
+    #     current_time += ssndurn
+    #     if current_time >= qdurn:
+    #         break
+    #     awaydurn = user.get_next_time_away_duration(current_time, qdurn)
+    #     current_time += awaydurn
+    #     print ssndurn, awaydurn
 
 

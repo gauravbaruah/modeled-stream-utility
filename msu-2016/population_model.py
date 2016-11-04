@@ -29,6 +29,7 @@ import numpy
 
 from exceptions import NotImplementedError
 from probability_distributions import Lognormal
+from probability_distributions import Beta
 
 class PopulationModel(object):
     """
@@ -60,6 +61,46 @@ class PopulationModel(object):
         """
         raise NotImplementedError    
 
+class LognormalAwayPersistenceSessionsPopulationModel(PopulationModel):
+    """
+    This population has Lognormal Away times + RBP persistence sessions
+    """
+
+    def __init__(self, random_seed, \
+        time_away_duration_mean_M_A, \
+        time_away_duration_stddev_S_A, \
+        RBP_persistence_parameters, \
+        lateness_decay_L ):
+
+        super(LognormalAwayPersistenceSessionsPopulationModel, self).__init__(random_seed)
+
+        self.M_A = time_away_duration_mean_M_A
+        self.S_A = time_away_duration_stddev_S_A
+        self.RBP_population_alpha, self.RBP_population_beta = RBP_persistence_parameters
+        self.L = lateness_decay_L
+        
+        self.lnorm_away = Lognormal(self.M_A, self.S_A)
+        self.beta_persistence = Beta(self.RBP_population_alpha, self.RBP_population_beta)
+
+        # NOTE: reading speed parameters sourced from [Clarke and Smucker,
+        # "Time Well Spent", IIiX, 2014]
+        self.lnorm_reading = Lognormal(1,1)
+        self.lnorm_reading.mean_mu = 1.29
+        self.lnorm_reading.stddev_sigma = 0.558
+
+    def generate_user_params(self, num_users=0):
+        if num_users == 0:
+            A = self.lnorm_away.get_random_sample()
+            P = self.beta_persistence.get_random_sample()
+            V = self.lnorm_reading.get_random_sample()
+            L = self.L
+            return A, P, V, L
+        else:
+            As = self.lnorm_away.get_random_samples(num_users)
+            Ps = self.beta_persistence.get_random_samples(num_users)
+            Vs = self.lnorm_reading.get_random_samples(num_users)
+            Ls = [self.L]*num_users
+            return zip(As, Ps, Vs, Ls)
 
 class LognormalPopulationModel(PopulationModel):
     """
@@ -107,23 +148,31 @@ class LognormalPopulationModel(PopulationModel):
 
 
 if __name__ == "__main__":
+    
+    M_A, S_A, a, b, L = [ float(a) for a in sys.argv[1:] ]
 
-    M_A, S_A, M_D, S_D, L = [ float(a) for a in sys.argv[1:] ]
+    population = LognormalAwayPersistenceSessionsPopulationModel(1234, M_A, S_A, [a,b], L)
 
-    population = LognormalPopulationModel(1234, M_A, S_A, M_D, S_D, L)
-
-    print population.lnorm_away.mean_mu
-    print population.lnorm_away.stddev_sigma
-
-    for i in xrange(50):
+    for i in xrange(10):
         print population.generate_user_params()
+
+
+    # M_A, S_A, M_D, S_D, L = [ float(a) for a in sys.argv[1:] ]
+
+    # population = LognormalPopulationModel(1234, M_A, S_A, M_D, S_D, L)
+
+    # print population.lnorm_away.mean_mu
+    # print population.lnorm_away.stddev_sigma
+
+    # for i in xrange(50):
+    #     print population.generate_user_params()
 
     
-    M_A, S_A, M_D, S_D, L = [ a*2 for a in [M_A, S_A, M_D, S_D, L]]
+    # M_A, S_A, M_D, S_D, L = [ a*2 for a in [M_A, S_A, M_D, S_D, L]]
 
-    population = LognormalPopulationModel(1234, M_A, S_A, M_D, S_D, L)
+    # population = LognormalPopulationModel(1234, M_A, S_A, M_D, S_D, L)
 
-    for i in xrange(50):
-        print population.generate_user_params()
+    # for i in xrange(50):
+    #     print population.generate_user_params()
 
         
