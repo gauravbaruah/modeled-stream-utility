@@ -307,6 +307,9 @@ class ModeledStreamUtility(object):
 
 class MSUReverseChronoOrder(ModeledStreamUtility, \
     ReverseChronologicalInterfaceMixin):
+    """
+    Simulates users reading updates in reverse chronological order at every session
+    """
 
     def _compute_user_MSU(self, user_instance, updates):
         """
