@@ -42,6 +42,21 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
     Users persist in reading updates at every session based on the RBP user model [Moffat, TOIS 2008]
     """
 
+    def __init__(self, num_users, RBP_persistence_params, \
+        population_time_away_mean, population_time_away_stddev, \
+        pop_lateness_decay):
+
+        super(MSURankedOrder, self).__init__(num_users)
+
+        self.population_model = LognormalAwayPersistenceSessionsPopulationModel(self.seed,
+                                population_time_away_mean, \
+                                population_time_away_stddev, \
+                                RBP_persistence_params, \
+                                pop_lateness_decay)
+
+        self.sampled_users = []
+        self.update_emit_times = []
+
     def _compute_user_MSU(self, user_instance, updates):
         logger.warning('not implemented TODO')
         raise NotImplemented
@@ -70,6 +85,7 @@ if __name__ == '__main__':
 
     args = ap.parse_args()
     print >> sys.stderr, args
+    
 
     # load query durations.
     # this helps to start every duration with 0                

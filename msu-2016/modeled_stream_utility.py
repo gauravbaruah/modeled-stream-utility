@@ -42,21 +42,11 @@ class ModeledStreamUtility(object):
 
     # random number seed for experiments 
     seed = 1234
-    
-    def __init__(self, num_users, pop_session_durn_mean, pop_session_durn_stddev,
-        pop_time_away_mean, pop_time_away_stddev, pop_lateness_decay):
-        # TODO: population models can be mixins for future versions of MSU.
-        # i.e. we may have population distribution specific
-        # ModeledStreamUtility evaluation classes
-        self.population_model = LognormalPopulationModel(self.seed,
-            pop_time_away_mean, pop_time_away_stddev, pop_session_durn_mean,
-            pop_session_durn_stddev, pop_lateness_decay)
-        
-        self.num_users = num_users
-        self.sampled_users = []
-        
-        self.update_emit_times = []
 
+    def __init__(self, num_users):
+        self.num_users = num_users
+    
+    
     @staticmethod
     def load_run_and_attach_gain(runfile, updlens, matches, useAverageLengths, track, query_durns):
         """
@@ -155,48 +145,11 @@ class ModeledStreamUtility(object):
     #    # class MSUReverseChronoOrder]
     #    raise NotImplementedError
     
-    
     def sample_users_from_population(self, query_duration):
-        if self.sampled_users:
-            self.sampled_users = []
-        
-        # reset the seed so that the same users are
-        # generated every time this function is called
-        self.population_model.reset_random_seed()
-            
-        # sampling user params for one user at a time
-        for ui in xrange(self.num_users):
-            A, D, V, L = self.population_model.generate_user_params()
-            self.sampled_users.append(UserModel(A,D,V,L))         
-            # with open('debugging/py.all.users', 'w') as utf:
-            #     for A,D,V,L in self.sampled_users:
-            #         print >> utf, '\t'.join(map(str,[D,A,V]))
-        
-        # sampling all user params all together for all users
-        # --> - results in 0.1 increase in score on average.
-        #     - note that this is due to differences in random sampling order
-        #       given the initial seed
-        # for user_params in self.population_model.generate_user_params(self.num_users):
-        #     self.sampled_users.append(UserModel(*user_params))
-        #     # with open('debugging/py.all.together.users', 'w') as utf:
-        #     #    for user in self.sampled_users:
-        #     #        print >> utf, '\t'.join(map(str,[user.D, user.A, user.V]))
-        
-        # for each user generate session and away times
-        useri = 0
-        for user in self.sampled_users:
-            #user = UserModel(*user_params)
-            
-            #user.generate_session_away_lengths(240*3600, True)
-            user.generate_session_away_lengths(query_duration, True)
-            
-            # #logger.debug(str(len(user.session_away_durations)))
-            # with open('debugging/py.ssn.away.times.user-{}'.format(useri+1), 'w') as utf:
-            #     for ssn, away in user.session_away_durations:
-            #         print >> utf, '\t'.join(map(str,[ssn, away]))
-            useri += 1
-            # if useri == 2:
-            #     break
+        """
+        The compute_population_MSU() method calls this method to re-sample population for every query
+        """
+        raise NotImplementedError    
 
     def _compute_user_MSU(self, user_instance, updates):
         """
@@ -232,6 +185,9 @@ class ModeledStreamUtility(object):
 
             #logger.debug('topic ' + str(qid) + '----------')
             
+            # reset the seed so that the same users are
+            # generated every time sample_users_from_population() function is called
+            self.population_model.reset_random_seed()
             self.sample_users_from_population(query_durns[qid][1] - query_durns[qid][0])
             
             topic_updates = []
@@ -310,6 +266,66 @@ class MSUReverseChronoOrder(ModeledStreamUtility, \
     """
     Simulates users reading updates in reverse chronological order at every session
     """
+
+    def __init__(self, num_users, pop_session_durn_mean, pop_session_durn_stddev,
+        pop_time_away_mean, pop_time_away_stddev, pop_lateness_decay):
+        # TODO: population models can be mixins for future versions of MSU.
+        # i.e. we may have population distribution specific
+        # ModeledStreamUtility evaluation classes
+
+        super(MSUReverseChronoOrder, self).__init__(num_users)
+
+        self.population_model = LognormalPopulationModel(self.seed,
+            pop_time_away_mean, pop_time_away_stddev, pop_session_durn_mean,
+            pop_session_durn_stddev, pop_lateness_decay)
+        
+        #self.num_users = num_users
+        logger.warning("num users %d" % (self.num_users,))
+
+        self.sampled_users = []        
+        self.update_emit_times = []
+
+    def sample_users_from_population(self, query_duration):
+        if self.sampled_users:
+            self.sampled_users = []
+        
+        # reset the seed so that the same users are
+        # generated every time this function is called
+        self.population_model.reset_random_seed()
+            
+        # sampling user params for one user at a time
+        for ui in xrange(self.num_users):
+            A, D, V, L = self.population_model.generate_user_params()
+            self.sampled_users.append(UserModel(A,D,V,L))         
+            # with open('debugging/py.all.users', 'w') as utf:
+            #     for A,D,V,L in self.sampled_users:
+            #         print >> utf, '\t'.join(map(str,[D,A,V]))
+        
+        # sampling all user params all together for all users
+        # --> - results in 0.1 increase in score on average.
+        #     - note that this is due to differences in random sampling order
+        #       given the initial seed
+        # for user_params in self.population_model.generate_user_params(self.num_users):
+        #     self.sampled_users.append(UserModel(*user_params))
+        #     # with open('debugging/py.all.together.users', 'w') as utf:
+        #     #    for user in self.sampled_users:
+        #     #        print >> utf, '\t'.join(map(str,[user.D, user.A, user.V]))
+        
+        # for each user generate session and away times
+        useri = 0
+        for user in self.sampled_users:
+            #user = UserModel(*user_params)
+            
+            #user.generate_session_away_lengths(240*3600, True)
+            user.generate_session_away_lengths(query_duration, True)
+            
+            # #logger.debug(str(len(user.session_away_durations)))
+            # with open('debugging/py.ssn.away.times.user-{}'.format(useri+1), 'w') as utf:
+            #     for ssn, away in user.session_away_durations:
+            #         print >> utf, '\t'.join(map(str,[ssn, away]))
+            useri += 1
+            # if useri == 2:
+            #     break
 
     def _compute_user_MSU(self, user_instance, updates):
         """

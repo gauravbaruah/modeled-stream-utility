@@ -102,6 +102,7 @@ class LognormalAwayPersistenceSessionsPopulationModel(PopulationModel):
             Ls = [self.L]*num_users
             return zip(As, Ps, Vs, Ls)
 
+
 class LognormalPopulationModel(PopulationModel):
     """
     Lognormal Population Model: the user population has lognormal
