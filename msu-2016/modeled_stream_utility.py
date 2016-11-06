@@ -48,7 +48,7 @@ class ModeledStreamUtility(object):
     
     
     @staticmethod
-    def load_run_and_attach_gain(runfile, updlens, matches, useAverageLengths, track, query_durns):
+    def load_run_and_attach_gain(runfile, updlens, nuggets, matches, useAverageLengths, track, query_durns):
         """
         This function attaches gain (nuggets) to sentences of a run, on the fly
         """
@@ -147,7 +147,8 @@ class ModeledStreamUtility(object):
     
     def sample_users_from_population(self, query_duration):
         """
-        The compute_population_MSU() method calls this method to re-sample population for every query
+        The compute_population_MSU() method calls this method to re-sample population for every query.
+        This is sometimes useful when we are modifying user sims data during MSU computation.
         """
         raise NotImplementedError    
 
@@ -183,7 +184,7 @@ class ModeledStreamUtility(object):
         # for each topic
         for qid in sorted(run.keys()):
 
-            #logger.debug('topic ' + str(qid) + '----------')
+            logger.debug('topic ' + str(qid) + '----------')
             
             # reset the seed so that the same users are
             # generated every time sample_users_from_population() function is called
@@ -512,7 +513,7 @@ if __name__ == "__main__":
         gc.collect()        
         logger.warning('loading runfile ' + runfile )
         try: 
-            run = MSU.load_run_and_attach_gain(runfile, updlens, matches, True, args.track, query_durns) #args.useAverageLengths)
+            run = MSU.load_run_and_attach_gain(runfile, updlens, nuggets, matches, True, args.track, query_durns) #args.useAverageLengths)
             ignored_qid = "7" if args.track == "ts13" else ""
             if ignored_qid in run:
                 run.pop(ignored_qid)

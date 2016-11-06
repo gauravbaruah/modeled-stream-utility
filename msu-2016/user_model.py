@@ -148,8 +148,6 @@ class LognormalAwayRBPPersistenceUserModel(object):
 
         self.A_exp = Exponential(self.A)
 
-        self.session_away_durations = []
-
     def __repr__(self):
         return str ({
                 'A': self.A,
@@ -157,7 +155,6 @@ class LognormalAwayRBPPersistenceUserModel(object):
                 'V': self.V,
                 'L': self.L,
             })
-
 
     def get_next_time_away_duration(self, current_time=None, query_duration=None):
         """

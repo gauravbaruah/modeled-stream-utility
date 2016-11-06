@@ -21,7 +21,7 @@ import utils
 # logging setup
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.WARNING)
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
@@ -44,7 +44,7 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
 
     def __init__(self, num_users, RBP_persistence_params, \
         population_time_away_mean, population_time_away_stddev, \
-        pop_lateness_decay):
+        pop_lateness_decay, window_size):
 
         super(MSURankedOrder, self).__init__(num_users)
 
@@ -52,14 +52,119 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
                                 population_time_away_mean, \
                                 population_time_away_stddev, \
                                 RBP_persistence_params, \
-                                pop_lateness_decay)
+                                pop_lateness_decay, )
 
         self.sampled_users = []
         self.update_emit_times = []
+        self.window_size = window_size
+
+    def sample_users_from_population(self, query_duration):
+        if self.sampled_users:
+            self.sampled_users = []
+
+        self.query_duration = query_duration
+
+        # reset the seed so that the same users are
+        # generated every time this function is called
+        self.population_model.reset_random_seed()
+
+        for ui in xrange(self.num_users):
+            A, P, V, L = self.population_model.generate_user_params()
+            self.sampled_users.append(LognormalAwayRBPPersistenceUserModel(A, P, V, L))    
 
     def _compute_user_MSU(self, user_instance, updates):
-        logger.warning('not implemented TODO')
-        raise NotImplemented
+        
+        user_topic_msu = 0.0
+        current_time = 0.0
+        oldest_available_update_idx = 0
+
+        updates_read = defaultdict(bool)
+        already_seen_ngts = {}
+        ssn_starts = [0.0]
+        num_updates = len(updates)
+
+        #logger.debug('num_updates {0}'.format(num_updates))
+
+        current_time = 0
+        while current_time < self.query_duration:
+            
+            #logger.debug('current_time {0}, window start {1}'.format(current_time, 
+            #    current_time - (current_time if self.window_size == -1 else self.window_size)))
+            
+            # find available sentences to read at this user session
+
+            # find latest update at current_time (session starts)
+            latest_update_idx = bisect.bisect(self.update_emit_times, current_time)
+            latest_update_idx -= 1
+                                   
+            if self.window_size != -1: #
+                # consider updates from within past window_size seconds only
+                oldest_available_update_idx = bisect.bisect(self.update_emit_times, 
+                                                current_time - self.window_size) 
+                if oldest_available_update_idx == num_updates:
+                    # no more updates to read
+                    # no need to eval further sessions
+                    #logger.debug('looked at all updates')
+                    break
+                #oldest_available_update_idx = 0 if oldest_available_update_idx == 0 else oldest_available_update_idx - 1
+            else:
+                # consider all update from start of query_duration
+                oldest_available_update_idx = 0
+
+            #logger.debug('oldest_available_update_idx {0}, latest_update_idx {1}'.format(oldest_available_update_idx,latest_update_idx))
+            #logger.debug('available {0}'.format(str(updates[oldest_available_update_idx:latest_update_idx+1])))
+
+            # read sentences until user persists
+            for update in self.update_presentation_order(oldest_available_update_idx,
+                latest_update_idx, updates):
+                
+                if update.updid in updates_read:
+                    # this update has already been read, move to the next one
+                    #logger.debug('ALREADY READ update {0}'.format(str(update)))
+                    continue
+                
+                #logger.debug('upddate {0}'.format(str(update)))
+                
+                # will the user persist in reading this udpate
+                if np.random.random_sample() > user_instance.P:
+                    # the user will not read this update
+                    #logger.debug('USER DID NOT PERSIST')
+                    break
+
+
+                # note time elapsed for reading each update; increment current_time
+                upd_time_to_read = (float(update.wlen) / user_instance.V)
+                current_time += upd_time_to_read
+
+                updates_read[update.updid] = True
+
+                update_msu = 0.0
+                # check for nuggets and update user msu
+                for ngt in update.nuggets:
+                    if ngt.ngtid in already_seen_ngts:
+                        continue
+                    ngt_after = bisect.bisect(ssn_starts, ngt.time)
+                    alpha = (len(ssn_starts) -1) - ngt_after
+                    already_seen_ngts[ngt.ngtid] = alpha
+                    alpha = 0 if alpha < 0 else alpha
+                    ngt_msu = (self.population_model.L ** alpha)
+                    update_msu += ngt_msu
+                
+                user_topic_msu += update_msu
+
+            # increment current_time with time spent away
+            time_away = user_instance.get_next_time_away_duration(current_time, self.query_duration)
+            current_time += time_away
+            ssn_starts.append(current_time)
+        
+        #logger.debug(str(user_instance))
+        #logger.debug(user_topic_msu)
+                
+        return user_topic_msu
+
+
+
+        
 
 if __name__ == '__main__':
 
@@ -118,7 +223,8 @@ if __name__ == '__main__':
     MSU = MSURankedOrder(args.num_users,
             args.RBP_persistence,
             args.population_time_away_mean, args.population_time_away_stddev,
-            args.lateness_decay)
+            args.lateness_decay,
+            args.window_size)
     
     if args.fix_persistence:
         MSU.fix_persistence_for_user_population(args.fix_persistence)
@@ -130,7 +236,7 @@ if __name__ == '__main__':
         gc.collect()        
         logger.warning('loading runfile ' + runfile )
         try: 
-            run = MSU.load_run_and_attach_gain(runfile, updlens, matches, True, args.track, query_durns) #args.useAverageLengths)
+            run = MSU.load_run_and_attach_gain(runfile, updlens, nuggets, matches, True, args.track, query_durns) #args.useAverageLengths)
             ignored_qid = "7" if args.track == "ts13" else ""
             if ignored_qid in run:
                 run.pop(ignored_qid)

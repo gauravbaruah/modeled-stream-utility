@@ -15,6 +15,15 @@ class UserInterfaceMixin(object):
     evaluation.
     """
 
+
+    def presort_updates(self, updates):
+        """
+        presort updates 
+        """
+        updates.sort(key=lambda t: t.updid)
+        updates.sort(key=lambda t: t.conf)
+        updates.sort(key=lambda t: t.time)
+
     def update_presentation_order(self, u, v, updates):
         """
         orders/ranks updates[u:v] as required by the user interface model
@@ -58,13 +67,6 @@ class ReverseChronologicalInterfaceMixin(UserInterfaceMixin):
     Models an interface where the user reads updates in reverse chronological
     order at every session
     """
-
-
-    def presort_updates(self, updates):
-            updates.sort(key=lambda t: t.updid)
-            updates.sort(key=lambda t: t.conf)
-            updates.sort(key=lambda t: t.time)
-
 
     def update_presentation_order(self, oldest_available_update_index, most_recent_update_index,
         updates):
@@ -117,9 +119,9 @@ class RankedInterfaceMixin(UserInterfaceMixin):
         """
         u = oldest_available_update_index
         v = most_recent_update_index
-
         
         upds = sorted(updates[u:v+1], key=attrgetter('updid'))
+        upds.sort(key=attrgetter('updid'))
         upds.sort(key=attrgetter('time'), reverse = True)
         upds.sort(key=attrgetter('conf'), reverse = True)
         
