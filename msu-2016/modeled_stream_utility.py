@@ -44,8 +44,8 @@ class ModeledStreamUtility(object):
     seed = 1234
 
     def __init__(self, num_users):
+        super(ModeledStreamUtility, self).__init__()
         self.num_users = num_users
-    
     
     @staticmethod
     def load_run_and_attach_gain(runfile, updlens, nuggets, matches, useAverageLengths, track, query_durns):

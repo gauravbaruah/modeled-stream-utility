@@ -22,6 +22,8 @@ import utils
 import logging
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
+#logger.setLevel(logging.INFO)
+#logger.setLevel(logging.DEBUG)
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
@@ -44,7 +46,7 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
 
     def __init__(self, num_users, RBP_persistence_params, \
         population_time_away_mean, population_time_away_stddev, \
-        pop_lateness_decay, window_size):
+        pop_lateness_decay, window_size, fix_persistence):
 
         super(MSURankedOrder, self).__init__(num_users)
 
@@ -57,6 +59,8 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         self.sampled_users = []
         self.update_emit_times = []
         self.window_size = window_size
+        self.fix_persistence = fix_persistence
+        self.user_counter = 0
 
     def sample_users_from_population(self, query_duration):
         if self.sampled_users:
@@ -70,10 +74,16 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
 
         for ui in xrange(self.num_users):
             A, P, V, L = self.population_model.generate_user_params()
-            self.sampled_users.append(LognormalAwayRBPPersistenceUserModel(A, P, V, L))    
+            if self.fix_persistence:
+                P = self.fix_persistence
+            self.sampled_users.append(LognormalAwayRBPPersistenceUserModel(A, P, V, L))
 
     def _compute_user_MSU(self, user_instance, updates):
         
+        self.user_counter += 1
+        if self.user_counter % 100 == 0:
+            logger.warning('{0} users simulated'.format(self.user_counter))
+
         user_topic_msu = 0.0
         current_time = 0.0
         oldest_available_update_idx = 0
@@ -82,25 +92,30 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         already_seen_ngts = {}
         ssn_starts = [0.0]
         num_updates = len(updates)
-
+        
+        self.reset_interface()
+        
+        #logger.warning('user {0}'.format(str(user_instance)))
         #logger.debug('num_updates {0}'.format(num_updates))
 
         current_time = 0
         while current_time < self.query_duration:
             
-            #logger.debug('current_time {0}, window start {1}'.format(current_time, 
-            #    current_time - (current_time if self.window_size == -1 else self.window_size)))
+            #logger.debug('current_time {0}, window start {1}'.format(current_time, current_time - (current_time if self.window_size == -1 else self.window_size)))
             
             # find available sentences to read at this user session
 
             # find latest update at current_time (session starts)
             latest_update_idx = bisect.bisect(self.update_emit_times, current_time)
             latest_update_idx -= 1
-                                   
-            if self.window_size != -1: #
+                                 
+            window_lower_limit = 0
+            if self.window_size != -1: 
+                window_lower_limit = current_time - self.window_size
+
                 # consider updates from within past window_size seconds only
                 oldest_available_update_idx = bisect.bisect(self.update_emit_times, 
-                                                current_time - self.window_size) 
+                                                window_lower_limit) 
                 if oldest_available_update_idx == num_updates:
                     # no more updates to read
                     # no need to eval further sessions
@@ -114,13 +129,20 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
             #logger.debug('oldest_available_update_idx {0}, latest_update_idx {1}'.format(oldest_available_update_idx,latest_update_idx))
             #logger.debug('available {0}'.format(str(updates[oldest_available_update_idx:latest_update_idx+1])))
 
+            self.add_updates_to_conf_heap(oldest_available_update_idx, latest_update_idx, updates)
+            #logger.debug('conf_heap {0}'.format(self.conf_heap))
+
             # read sentences until user persists
-            for update in self.update_presentation_order(oldest_available_update_idx,
+            for upd_idx in self.update_presentation_order(oldest_available_update_idx,
                 latest_update_idx, updates):
+
+                update =  updates[upd_idx]
+                #logger.debug('update {0}'.format(str(update)))
                 
-                if update.updid in updates_read:
-                    # this update has already been read, move to the next one
-                    #logger.debug('ALREADY READ update {0}'.format(str(update)))
+                if update.time < window_lower_limit:
+                    # this update is not to be considered for display to the user anymore
+                    #logger.debug("update is OUT OF WINDOW LIMIT")
+                    self.remove_update_from_conf_heap(update.updid)
                     continue
                 
                 #logger.debug('upddate {0}'.format(str(update)))
@@ -131,12 +153,14 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
                     #logger.debug('USER DID NOT PERSIST')
                     break
 
-
                 # note time elapsed for reading each update; increment current_time
                 upd_time_to_read = (float(update.wlen) / user_instance.V)
                 current_time += upd_time_to_read
 
                 updates_read[update.updid] = True
+                # the user PERSISTED to read this update
+                #logger.debug('READ UPDATE')
+                self.remove_update_from_conf_heap(update.updid)
 
                 update_msu = 0.0
                 # check for nuggets and update user msu
@@ -157,8 +181,8 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
             current_time += time_away
             ssn_starts.append(current_time)
         
-        #logger.debug(str(user_instance))
-        #logger.debug(user_topic_msu)
+        #logger.warning( str(user_instance) )
+        #logger.warning(user_topic_msu)
                 
         return user_topic_msu
 
@@ -183,7 +207,7 @@ if __name__ == '__main__':
         help="models the spread of \"reading persistence\" across the user population via a beta distribution")
     ap.add_argument("--window_size", type=int, default=86400, help="updates older than window_size from current session will not be shown to user (window_size = -1 --> all updates since start of query duration will be shown)")
     ap.add_argument("runfiles", nargs="+")
-    ap.add_argument("--fix_persistence", nargs=1, type=float)
+    ap.add_argument("--fix_persistence", type=float)
 
     # NOTE: population reading speed parameters drawn from [Time Well Spent,
     # Clarke and Smucker, 2014]
@@ -224,11 +248,9 @@ if __name__ == '__main__':
             args.RBP_persistence,
             args.population_time_away_mean, args.population_time_away_stddev,
             args.lateness_decay,
-            args.window_size)
+            args.window_size,
+            args.fix_persistence)
     
-    if args.fix_persistence:
-        MSU.fix_persistence_for_user_population(args.fix_persistence)
-
     run = {}
     for runfile in args.runfiles:
         run.clear()

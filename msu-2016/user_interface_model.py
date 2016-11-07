@@ -5,6 +5,8 @@
 
 from update import Update
 from operator import attrgetter, itemgetter
+import heapq
+from collections import defaultdict
 
 
 class UserInterfaceMixin(object):
@@ -111,6 +113,31 @@ class RankedInterfaceMixin(UserInterfaceMixin):
     # This requires a map to be stored for all updates that have already been
     # read.
 
+    def __init__(self):
+        super(RankedInterfaceMixin, self).__init__()
+        self.conf_heap = []
+        self.added_to_heap = defaultdict(bool)
+
+    def reset_interface(self):
+        self.conf_heap = []
+        self.added_to_heap.clear()
+
+    def add_updates_to_conf_heap(self, oldest_available_update_index, most_recent_update_index,
+        updates):
+
+        u = oldest_available_update_index
+        v = most_recent_update_index
+        
+        for i in xrange(u, v+1):
+            update = updates[i]
+            if update.updid not in self.added_to_heap:
+                heapq.heappush(self.conf_heap, (-update.conf, update.time, update.updid, i))
+                self.added_to_heap[update.updid] = True
+
+    def remove_update_from_conf_heap(self, updid):
+        assert(updid == self.conf_heap[0][2])
+        return heapq.heappop(self.conf_heap)
+
     def update_presentation_order(self, oldest_available_update_index, most_recent_update_index,
         updates):
         """
@@ -119,14 +146,10 @@ class RankedInterfaceMixin(UserInterfaceMixin):
         """
         u = oldest_available_update_index
         v = most_recent_update_index
-        
-        upds = sorted(updates[u:v+1], key=attrgetter('updid'))
-        upds.sort(key=attrgetter('updid'))
-        upds.sort(key=attrgetter('time'), reverse = True)
-        upds.sort(key=attrgetter('conf'), reverse = True)
-        
-        for x in upds:
-            yield x
+       
+        while len(self.conf_heap):
+            max_conf_update = self.conf_heap[0]
+            yield max_conf_update[3]
 
 
 if __name__ == "__main__":
