@@ -133,6 +133,7 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
             #logger.debug('conf_heap {0}'.format(self.conf_heap))
 
             # read sentences until user persists
+            is_first_update = True
             for upd_idx in self.update_presentation_order(oldest_available_update_idx,
                 latest_update_idx, updates):
 
@@ -148,7 +149,7 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
                 #logger.debug('upddate {0}'.format(str(update)))
                 
                 # will the user persist in reading this udpate
-                if np.random.random_sample() > user_instance.P:
+                if not is_first_update and np.random.random_sample() > user_instance.P:
                     # the user will not read this update
                     #logger.debug('USER DID NOT PERSIST')
                     break
@@ -156,6 +157,8 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
                 # note time elapsed for reading each update; increment current_time
                 upd_time_to_read = (float(update.wlen) / user_instance.V)
                 current_time += upd_time_to_read
+
+                is_first_update = False
 
                 updates_read[update.updid] = True
                 # the user PERSISTED to read this update
