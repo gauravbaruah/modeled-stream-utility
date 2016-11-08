@@ -81,7 +81,7 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
     def _compute_user_MSU(self, user_instance, updates):
         
         self.user_counter += 1
-        if self.user_counter % 100 == 0:
+        if self.user_counter % 1000 == 0:
             logger.warning('{0} users simulated'.format(self.user_counter))
 
         user_topic_msu = 0.0
