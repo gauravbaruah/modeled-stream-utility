@@ -8,7 +8,7 @@ from operator import attrgetter, itemgetter
 import heapq
 from collections import defaultdict
 import numpy as np
-
+import sys
 
 class UserInterfaceMixin(object):
     """
@@ -152,7 +152,7 @@ class RankedInterfaceMixin(UserInterfaceMixin):
             max_conf_update = self.conf_heap[0]
             yield max_conf_update[3]
 
-    def heap_top_is_smaller(self, heap, update):
+    def heap_top_is_smaller(self, heap, update, upd_idx):
         """
         top: (confidence, time, updid, index)
         update: update object
@@ -168,13 +168,17 @@ class RankedInterfaceMixin(UserInterfaceMixin):
             if time == update.time:
                 if updid < update.updid:
                     return True
-                assert(updid != update.updid)
+                if updid == update.updid:
+                    # print >>sys.stderr, 'possible duplicate update submitted'
+                    # print >>sys.stderr, 'old index {}, new index {}'.format(index, upd_idx)
+                    assert(index < upd_idx)
+                    return True
         return False
 
     def add_to_heap(self, topkqueue, topkcount, update, upd_idx):
         if len(topkqueue) < topkcount:
             heapq.heappush( topkqueue, (update.conf, update.time, update.updid, upd_idx) )    
-        elif self.heap_top_is_smaller(topkqueue, update) and len(topkqueue) == topkcount:                            
+        elif self.heap_top_is_smaller(topkqueue, update, upd_idx) and len(topkqueue) == topkcount:                            
             heapq.heappushpop( topkqueue, (update.conf, update.time, update.updid, upd_idx) )
         assert(len(topkqueue) <= topkcount)
 
