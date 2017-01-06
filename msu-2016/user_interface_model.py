@@ -157,7 +157,7 @@ class RankedInterfaceMixin(UserInterfaceMixin):
         update: update object
         """
         if not heap:
-            return False
+            return True
         confidence, time, updid, index = heap[0]
         if confidence < update.conf:
             return True
@@ -170,6 +170,13 @@ class RankedInterfaceMixin(UserInterfaceMixin):
                 assert(updid != update.updid)
         return False
 
+    def add_to_heap(self, topkqueue, topkcount, update):
+        if self.heap_top_is_smaller(topkqueue, update):                
+            if len(topkqueue) < topkcount:
+                heapq.heappush( topkqueue, (update.conf, update.time, update.updid, upd_idx) )    
+            elif len(topkqueue) == topkcount:
+                heapq.heappushpop( topkqueue, (update.conf, update.time, update.updid, upd_idx) )
+            assert(len(topkqueue) <= topkcount)
 
 if __name__ == "__main__":
 

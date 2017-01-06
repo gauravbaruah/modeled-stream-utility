@@ -78,6 +78,9 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
                 P = self.fix_persistence
             self.sampled_users.append(LognormalAwayRBPPersistenceUserModel(A, P, V, L))
 
+
+    
+
     def _compute_user_MSU(self, user_instance, updates):
         
         self.user_counter += 1
@@ -100,127 +103,77 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
 
         user_trail = user_instance.generate_user_trail(self.query_duration)
         window_starts = map(enumerate(user_trail), lambda x: x[1][0] - self.window_size if x[1][0] - self.window_size >= 0.0 else 0.0)
+        ssn_starts = [s for s,r in user_trail]
                
         #logger.warning('user {0}'.format(str(user_instance)))
         #logger.debug('num_updates {0}'.format(num_updates))
 
-        topk_queue = []
-        topk_count = 0
+        topkqueue = []
+        topkcount = 0
 
         uti = 0
+        wsi = 0
         upd_idx = 0
 
-        while uti < len(user_trail):
-            ssn_start, ssn_reads = user_trail[uti]
-            
-            for wsi in (i for i,v in window_starts if updates[upd_idx].time > v)
-                topk_count += user_trail[wsi][1]
-            
-            # process all updates till the start of this session
-            # - keep a track of window limits for next session
-            while updates[upd_idx].time <= ssn_start:
-                # check for topk_count
-                if updates[upd_idx].time >= next_ssn_window_start:
-                    topk_count += next_reads
-                # add to topk
-                if self.heap_top_is_smaller(topk_queue, updates[upd_idx]):
-                    update = updates[upd_idx]
-                    if len(topk_queue) < topk_count:
-                        heapq.heappush( topk_queue, (update.conf, update.time, update.updid, upd_idx) )    
-                    elif len(topk_queue) == topk_count:
-                        heapq.heappushpop( topk_queue, (update.conf, update.time, update.updid, upd_idx) )
-                    assert(len(topk_queue) <= topk_count)
-                upd_idx += 1            
+        while upd_idx < len(updates) and uti < len(user_trail):
+            update = updates[upd_idx]
 
-            # process session reading
+            # check for window starts
+            while window_starts[wsi][1] < update.time:
+                topkcount += user_trail[wsi][1]
+                wsi += 1
 
+            if user_trail[uti][0] < update.time:    
+                # this is the first update beyond a session start
+                # --> process this session
+                ssn_start, ssn_reads = user_trail[uti]
+                next_ssn_start = user_trail[uti+1][0]
+                current_time = ssn_start
 
-
-        current_time = 0
-        while current_time < self.query_duration:
-            
-            #logger.debug('current_time {0}, window start {1}'.format(current_time, current_time - (current_time if self.window_size == -1 else self.window_size)))
-            
-            # find available sentences to read at this user session
-
-            # find latest update at current_time (session starts)
-            latest_update_idx = bisect.bisect(self.update_emit_times, current_time)
-            latest_update_idx -= 1
-                                 
-            window_lower_limit = 0
-            if self.window_size != -1: 
-                window_lower_limit = current_time - self.window_size
-
-                # consider updates from within past window_size seconds only
-                oldest_available_update_idx = bisect.bisect(self.update_emit_times, 
-                                                window_lower_limit) 
-                if oldest_available_update_idx == num_updates:
-                    # no more updates to read
-                    # no need to eval further sessions
-                    #logger.debug('looked at all updates')
-                    break
-                #oldest_available_update_idx = 0 if oldest_available_update_idx == 0 else oldest_available_update_idx - 1
-            else:
-                # consider all update from start of query_duration
-                oldest_available_update_idx = 0
-
-            #logger.debug('oldest_available_update_idx {0}, latest_update_idx {1}'.format(oldest_available_update_idx,latest_update_idx))
-            #logger.debug('available {0}'.format(str(updates[oldest_available_update_idx:latest_update_idx+1])))
-
-            self.add_updates_to_conf_heap(oldest_available_update_idx, latest_update_idx, updates)
-            #logger.debug('conf_heap {0}'.format(self.conf_heap))
-
-            # read sentences until user persists
-            is_first_update = True
-            for upd_idx in self.update_presentation_order(oldest_available_update_idx,
-                latest_update_idx, updates):
-
-                update =  updates[upd_idx]
-                #logger.debug('update {0}'.format(str(update)))
+                available_updates = sorted(topkqueue, key=operator.attrgetter('conf'), reverse=True)                
                 
-                if update.time < window_lower_limit:
-                    # this update is not to be considered for display to the user anymore
-                    #logger.debug("update is OUT OF WINDOW LIMIT")
-                    self.remove_update_from_conf_heap(update.updid)
-                    continue
+                topkqueue = available_updates[ssn_reads:]
+                heapq.heapify(topkqueue)
+                topkcount -= ssn_reads
+                assert(topkcount >= 0)
+                assert(topkcount == len(topkqueue))
+
+                available_updates = available_updates[:ssn_reads]
+
+                for ai in xrange(len(available_updates)): # for num_reads
+
+                    read_update = updates[available_updates[ai][3]]
+
+                    upd_time_to_read = (float(read_update.wlen) / user_instance.V)
+                    current_time += upd_time_to_read
+                    if current_time > next_ssn_start:
+                        # user persisted in reading upto the start of the next session
+                        next_ssn_window_start = window_starts[uti+1]
+                        for ti in xrange(ai, len(available_updates)):                            
+                            if available_updates[ti][1] > next_ssn_window_start:
+                                self.add_to_heap(topkqueue, topkcount, updates[available_updates[ti][3]])
+                        break
+
+                    updates_read[read_update.updid] = True
+                    
+                    read_update_msu = 0.0
+                    # check for nuggets and update user msu
+                    for ngt in read_update.nuggets:
+                        if ngt.ngtid in already_seen_ngts:
+                            continue
+                        ngt_after = bisect.bisect(ssn_starts, ngt.time)
+                        alpha = (len(ssn_starts) -1) - ngt_after
+                        already_seen_ngts[ngt.ngtid] = alpha
+                        alpha = 0 if alpha < 0 else alpha
+                        ngt_msu = (self.population_model.L ** alpha)
+                        read_update_msu += ngt_msu
+                    
+                    user_topic_msu += read_update_msu
                 
-                #logger.debug('upddate {0}'.format(str(update)))
-                
-                # will the user persist in reading this udpate
-                if not is_first_update and np.random.random_sample() > user_instance.P:
-                    # the user will not read this update
-                    #logger.debug('USER DID NOT PERSIST')
-                    break
+                uti += 1
 
-                # note time elapsed for reading each update; increment current_time
-                upd_time_to_read = (float(update.wlen) / user_instance.V)
-                current_time += upd_time_to_read
-
-                is_first_update = False
-
-                updates_read[update.updid] = True
-                # the user PERSISTED to read this update
-                #logger.debug('READ UPDATE')
-                self.remove_update_from_conf_heap(update.updid)
-
-                update_msu = 0.0
-                # check for nuggets and update user msu
-                for ngt in update.nuggets:
-                    if ngt.ngtid in already_seen_ngts:
-                        continue
-                    ngt_after = bisect.bisect(ssn_starts, ngt.time)
-                    alpha = (len(ssn_starts) -1) - ngt_after
-                    already_seen_ngts[ngt.ngtid] = alpha
-                    alpha = 0 if alpha < 0 else alpha
-                    ngt_msu = (self.population_model.L ** alpha)
-                    update_msu += ngt_msu
-                
-                user_topic_msu += update_msu
-
-            # increment current_time with time spent away
-            time_away = user_instance.get_next_time_away_duration(current_time, self.query_duration)
-            current_time += time_away
-            ssn_starts.append(current_time)
+            self.add_to_heap(topkqueue, topkcount, update)
+            upd_idx += 1
         
         #logger.warning( str(user_instance) )
         #logger.warning(user_topic_msu)
