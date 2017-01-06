@@ -4,9 +4,10 @@ import sys
 import os
 import gc
 import argparse
-import numpy as np
 import bisect
 from collections import defaultdict
+import operator
+import heapq
 
 from update import Update
 from nugget import Nugget
@@ -24,6 +25,7 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 #logger.setLevel(logging.INFO)
 #logger.setLevel(logging.DEBUG)
+
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.DEBUG)
@@ -79,7 +81,59 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
             self.sampled_users.append(LognormalAwayRBPPersistenceUserModel(A, P, V, L))
 
 
+    def process_session(self, updates, user_trail, uti, topkqueue, topkcount, updates_read, ssn_starts, window_starts, user_instance, already_seen_ngts ):
+        ssn_start, ssn_reads = user_trail[uti]
+        next_ssn_start = user_trail[uti+1][0]
+        current_time = ssn_start
+        session_msu = 0.0
+
+        logger.debug('session {}: start {}; reads {}'.format(uti, ssn_start, ssn_reads))
+
+        available_updates = sorted(topkqueue, key=operator.itemgetter(0), reverse=True)                
+        
+        topkqueue = available_updates[ssn_reads:]
+        heapq.heapify(topkqueue)
+        topkcount -= ssn_reads
+        #assert(topkcount >= 0)                
+
+        available_updates = available_updates[:ssn_reads]
+        logger.debug('available_updates {}'.format(available_updates))
+        logger.debug('topk count {} queue {}'.format(topkcount, topkqueue))
+
+        for ai in xrange(len(available_updates)): # for num_reads
     
+            read_update = updates[available_updates[ai][3]]
+            
+            upd_time_to_read = (float(read_update.wlen) / user_instance.V)
+            current_time += upd_time_to_read
+            if current_time > next_ssn_start:
+                # user persisted in reading upto the start of the next session
+                logger.info('user persisted in reading upto the start of the next session')
+                next_ssn_window_start = window_starts[uti+1]
+                for ti in xrange(ai, len(available_updates)):                            
+                    if available_updates[ti][1] > next_ssn_window_start:
+                        self.add_to_heap(topkqueue, topkcount, updates[available_updates[ti][3]], available_updates[ti][3])
+                break
+            
+            updates_read[read_update.updid] = True
+            logger.debug('read update {}'.format(read_update))
+            
+            read_update_msu = 0.0
+            # check for nuggets and update user msu
+            for ngt in read_update.nuggets:
+                if ngt.ngtid in already_seen_ngts:
+                    continue
+                ngt_after = bisect.bisect(ssn_starts, ngt.time)                
+                alpha = uti - ngt_after
+                already_seen_ngts[ngt.ngtid] = alpha
+                alpha = 0 if alpha < 0 else alpha
+                ngt_msu = (user_instance.L ** alpha)
+                logger.debug('ngt {} alpha {} msu {}'.format(ngt, alpha, ngt_msu))
+                read_update_msu += ngt_msu
+            
+            session_msu += read_update_msu
+        logger.debug('processed session msu ={}'.format(session_msu))
+        return session_msu, topkqueue, topkcount
 
     def _compute_user_MSU(self, user_instance, updates):
         
@@ -92,9 +146,11 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         oldest_available_update_idx = 0
 
         updates_read = defaultdict(bool)
-        already_seen_ngts = {}
-        ssn_starts = [0.0]
+        already_seen_ngts = {}        
         num_updates = len(updates)
+
+        logger.warning('user {0}'.format(str(user_instance)))
+        logger.debug('num_updates {0}'.format(num_updates))
 
         # generate user trail
         # - if in case a user reads till the start of the next session.
@@ -102,12 +158,14 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         #     - simulates that the user though persisting now wants new information (reload page because I am scraping the bottom here)
 
         user_trail = user_instance.generate_user_trail(self.query_duration)
-        window_starts = map(enumerate(user_trail), lambda x: x[1][0] - self.window_size if x[1][0] - self.window_size >= 0.0 else 0.0)
+        logger.debug('user_trail {}'.format(user_trail))        
+        window_starts = map(lambda x: (x[0], x[1][0] - self.window_size) if x[1][0] - self.window_size >= 0.0 else (x[0], 0.0), enumerate(user_trail))
+        if self.window_size == -1:
+            window_starts = map(lambda x: (x[0], 0.0), enumerate(user_trail))
+        logger.debug('window_starts {}'.format(window_starts))
         ssn_starts = [s for s,r in user_trail]
+        logger.debug('ssn_starts {}'.format(ssn_starts))
                
-        #logger.warning('user {0}'.format(str(user_instance)))
-        #logger.debug('num_updates {0}'.format(num_updates))
-
         topkqueue = []
         topkcount = 0
 
@@ -115,69 +173,52 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         wsi = 0
         upd_idx = 0
 
-        while upd_idx < len(updates) and uti < len(user_trail):
+        while upd_idx < len(updates):
             update = updates[upd_idx]
+            logger.debug('-------')
+            logger.debug('update {}: {}'.format(upd_idx, update))
 
             # check for window starts
             while window_starts[wsi][1] < update.time:
                 topkcount += user_trail[wsi][1]
+                logger.debug('window {} started; needs {} '.format(wsi, user_trail[wsi][1]))
                 wsi += 1
+            logger.debug('topkcount {}'.format(topkcount))
 
-            if user_trail[uti][0] < update.time:    
+            while user_trail[uti][0] < update.time:    
                 # this is the first update beyond a session start
                 # --> process this session
-                ssn_start, ssn_reads = user_trail[uti]
-                next_ssn_start = user_trail[uti+1][0]
-                current_time = ssn_start
-
-                available_updates = sorted(topkqueue, key=operator.attrgetter('conf'), reverse=True)                
-                
-                topkqueue = available_updates[ssn_reads:]
-                heapq.heapify(topkqueue)
-                topkcount -= ssn_reads
-                assert(topkcount >= 0)
-                assert(topkcount == len(topkqueue))
-
-                available_updates = available_updates[:ssn_reads]
-
-                for ai in xrange(len(available_updates)): # for num_reads
-
-                    read_update = updates[available_updates[ai][3]]
-
-                    upd_time_to_read = (float(read_update.wlen) / user_instance.V)
-                    current_time += upd_time_to_read
-                    if current_time > next_ssn_start:
-                        # user persisted in reading upto the start of the next session
-                        next_ssn_window_start = window_starts[uti+1]
-                        for ti in xrange(ai, len(available_updates)):                            
-                            if available_updates[ti][1] > next_ssn_window_start:
-                                self.add_to_heap(topkqueue, topkcount, updates[available_updates[ti][3]])
-                        break
-
-                    updates_read[read_update.updid] = True
-                    
-                    read_update_msu = 0.0
-                    # check for nuggets and update user msu
-                    for ngt in read_update.nuggets:
-                        if ngt.ngtid in already_seen_ngts:
-                            continue
-                        ngt_after = bisect.bisect(ssn_starts, ngt.time)
-                        alpha = (len(ssn_starts) -1) - ngt_after
-                        already_seen_ngts[ngt.ngtid] = alpha
-                        alpha = 0 if alpha < 0 else alpha
-                        ngt_msu = (self.population_model.L ** alpha)
-                        read_update_msu += ngt_msu
-                    
-                    user_topic_msu += read_update_msu
-                
+                session_msu, topkqueue, topkcount = self.process_session(updates, user_trail, uti, topkqueue, topkcount, updates_read, ssn_starts, window_starts, user_instance, already_seen_ngts)
+                user_topic_msu += session_msu
                 uti += 1
 
-            self.add_to_heap(topkqueue, topkcount, update)
+            self.add_to_heap(topkqueue, topkcount, update, upd_idx)
+            logger.debug('adding update {} to queue'.format(upd_idx))
+            #logger.debug('topkqueue {}'.format(topkqueue))
             upd_idx += 1
+            if uti == len(user_trail):
+                logger.debug('all sessions processed')
+                break
+
+        # handle sessions beyond the last update
+        if upd_idx >= len(updates):
+            logger.debug('all updates processed.')        
+        while uti < len(user_trail):
+            logger.debug('processing leftover session')
+            session_msu, topkqueue, topkcount = self.process_session(updates, user_trail, uti, topkqueue, topkcount, updates_read, ssn_starts, window_starts, user_instance, already_seen_ngts)
+            user_topic_msu += session_msu
+            if len(updates_read) == len(updates):
+                logger.debug('read all updates')
+                break
+            if topkcount < 0:
+                logger.debug('no more updates left to satisfy user needs')
+                break
+            uti += 1
+
+        logger.warning( str(user_instance) )
+        logger.warning(user_topic_msu)
+
         
-        #logger.warning( str(user_instance) )
-        #logger.warning(user_topic_msu)
-                
         return user_topic_msu
 
 

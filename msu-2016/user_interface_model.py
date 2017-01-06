@@ -7,6 +7,7 @@ from update import Update
 from operator import attrgetter, itemgetter
 import heapq
 from collections import defaultdict
+import numpy as np
 
 
 class UserInterfaceMixin(object):
@@ -170,13 +171,12 @@ class RankedInterfaceMixin(UserInterfaceMixin):
                 assert(updid != update.updid)
         return False
 
-    def add_to_heap(self, topkqueue, topkcount, update):
-        if self.heap_top_is_smaller(topkqueue, update):                
-            if len(topkqueue) < topkcount:
-                heapq.heappush( topkqueue, (update.conf, update.time, update.updid, upd_idx) )    
-            elif len(topkqueue) == topkcount:
-                heapq.heappushpop( topkqueue, (update.conf, update.time, update.updid, upd_idx) )
-            assert(len(topkqueue) <= topkcount)
+    def add_to_heap(self, topkqueue, topkcount, update, upd_idx):
+        if len(topkqueue) < topkcount:
+            heapq.heappush( topkqueue, (update.conf, update.time, update.updid, upd_idx) )    
+        elif self.heap_top_is_smaller(topkqueue, update) and len(topkqueue) == topkcount:                            
+            heapq.heappushpop( topkqueue, (update.conf, update.time, update.updid, upd_idx) )
+        assert(len(topkqueue) <= topkcount)
 
 if __name__ == "__main__":
 

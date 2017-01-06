@@ -182,7 +182,7 @@ class LognormalAwayRBPPersistenceUserModel(object):
             # read one update
             num_read = 1
 
-            while np.random.random() < self.P:
+            while numpy.random.random() < self.P:
                 num_read += 1
 
             sessions.append( (current_time, num_read) )
