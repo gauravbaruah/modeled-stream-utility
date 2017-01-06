@@ -151,6 +151,25 @@ class RankedInterfaceMixin(UserInterfaceMixin):
             max_conf_update = self.conf_heap[0]
             yield max_conf_update[3]
 
+    def heap_top_is_smaller(self, heap, update):
+        """
+        top: (confidence, time, updid, index)
+        update: update object
+        """
+        if not heap:
+            return False
+        confidence, time, updid, index = heap[0]
+        if confidence < update.conf:
+            return True
+        if confidence == update.conf:
+            if time < update.time:
+                return True
+            if time == update.time:
+                if updid < update.updid:
+                    return True
+                assert(updid != update.updid)
+        return False
+
 
 if __name__ == "__main__":
 

@@ -172,6 +172,25 @@ class LognormalAwayRBPPersistenceUserModel(object):
                 duration = query_duration - current_time
         return duration
 
+    def generate_user_trail(self, query_duration):
+        """
+        return [(session_start, num_read),] tuples based on user model parameters
+        """ 
+        sessions = []       
+        current_time = 0.0
+        while current_time < query_duration:
+            # read one update
+            num_read = 1
+
+            while np.random.random() < self.P:
+                num_read += 1
+
+            sessions.append( (current_time, num_read) )
+            time_away = self.get_next_time_away_duration(current_time, query_duration)
+            current_time += time_away
+        
+        return sessions
+
 
 if __name__ == "__main__":
 

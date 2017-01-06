@@ -92,11 +92,49 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         already_seen_ngts = {}
         ssn_starts = [0.0]
         num_updates = len(updates)
-        
-        self.reset_interface()
-        
+
+        # generate user trail
+        # - if in case a user reads till the start of the next session.
+        #   - new ranked updates are shown when the new session starts
+        #     - simulates that the user though persisting now wants new information (reload page because I am scraping the bottom here)
+
+        user_trail = user_instance.generate_user_trail(self.query_duration)
+        window_starts = map(enumerate(user_trail), lambda x: x[1][0] - self.window_size if x[1][0] - self.window_size >= 0.0 else 0.0)
+               
         #logger.warning('user {0}'.format(str(user_instance)))
         #logger.debug('num_updates {0}'.format(num_updates))
+
+        topk_queue = []
+        topk_count = 0
+
+        uti = 0
+        upd_idx = 0
+
+        while uti < len(user_trail):
+            ssn_start, ssn_reads = user_trail[uti]
+            
+            for wsi in (i for i,v in window_starts if updates[upd_idx].time > v)
+                topk_count += user_trail[wsi][1]
+            
+            # process all updates till the start of this session
+            # - keep a track of window limits for next session
+            while updates[upd_idx].time <= ssn_start:
+                # check for topk_count
+                if updates[upd_idx].time >= next_ssn_window_start:
+                    topk_count += next_reads
+                # add to topk
+                if self.heap_top_is_smaller(topk_queue, updates[upd_idx]):
+                    update = updates[upd_idx]
+                    if len(topk_queue) < topk_count:
+                        heapq.heappush( topk_queue, (update.conf, update.time, update.updid, upd_idx) )    
+                    elif len(topk_queue) == topk_count:
+                        heapq.heappushpop( topk_queue, (update.conf, update.time, update.updid, upd_idx) )
+                    assert(len(topk_queue) <= topk_count)
+                upd_idx += 1            
+
+            # process session reading
+
+
 
         current_time = 0
         while current_time < self.query_duration:
