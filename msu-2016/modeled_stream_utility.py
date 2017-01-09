@@ -7,6 +7,7 @@ import argparse
 import numpy as np
 import bisect 
 from collections import defaultdict
+import array
 
 from update import Update
 from nugget import Nugget
@@ -204,7 +205,9 @@ class ModeledStreamUtility(object):
             # TODO: try with numpy.searchsorted on an array of  timestamps in
             # an array; also TODO: how to clear and delete numpy vars
             # extracting update times for faster search
-            self.update_emit_times = [ upd.time for upd in topic_updates ] 
+            self.update_emit_times = array.array('d', [ upd.time for upd in topic_updates ])
+            self.update_confidences = array.array('d', [ upd.conf for upd in topic_updates ] )
+            self.update_lengths = array.array('d', [upd.wlen for upd in topic_updates])
                             
             # for users in population
             usercount = 0
