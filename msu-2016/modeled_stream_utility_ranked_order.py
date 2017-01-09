@@ -166,6 +166,7 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         # logger.debug('window_starts {}'.format(window_starts))
         ssn_starts = [s for s,r in user_trail]
         # logger.debug('ssn_starts {}'.format(ssn_starts))
+        num_sessions = len(user_trail)
                
         topkqueue = []
         topkcount = 0
@@ -174,26 +175,26 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         wsi = 0
         upd_idx = 0
 
-        while upd_idx < len(updates):
+        while upd_idx < num_updates:
             update = updates[upd_idx]
             # logger.debug('-------')
             # logger.debug('update {}: {}'.format(upd_idx, update))
 
             # check for window starts
-            while wsi < len(window_starts) and window_starts[wsi][1] < update.time:
+            while wsi < num_sessions and window_starts[wsi][1] < update.time:
                 topkcount += user_trail[wsi][1]
                 # logger.debug('window {} started; needs {} '.format(wsi, user_trail[wsi][1]))
                 wsi += 1
             # logger.debug('topkcount {}'.format(topkcount))
 
-            while uti < len(user_trail) and user_trail[uti][0] < update.time:    
+            while uti < num_sessions and user_trail[uti][0] < update.time:    
                 # this is the first update beyond a session start
                 # --> process this session
                 session_msu, topkqueue, topkcount = self.process_session(updates, user_trail, uti, topkqueue, topkcount, updates_read, ssn_starts, window_starts, user_instance, already_seen_ngts)
                 user_topic_msu += session_msu
                 uti += 1
 
-            if uti == len(user_trail):
+            if uti == num_sessions:
                 # logger.debug('all sessions processed')
                 break
 
@@ -205,11 +206,11 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         # handle sessions beyond the last update
         # if upd_idx >= len(updates):
             # logger.debug('all updates processed.')        
-        while uti < len(user_trail):
+        while uti < num_sessions:
             # logger.debug('processing leftover session')
             session_msu, topkqueue, topkcount = self.process_session(updates, user_trail, uti, topkqueue, topkcount, updates_read, ssn_starts, window_starts, user_instance, already_seen_ngts)
             user_topic_msu += session_msu
-            if len(updates_read) == len(updates):
+            if len(updates_read) == num_updates:
                 # logger.debug('read all updates')
                 break
             if topkcount < 0:
