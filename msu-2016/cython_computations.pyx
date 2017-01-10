@@ -1,3 +1,4 @@
+# cython: profile=True
 cimport cython
 import array
 from collections import defaultdict
@@ -10,8 +11,8 @@ import operator
 # logger = logging.getLogger(__name__)
 
 #@cython.profile(True)
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
 cdef bint heap_top_is_smaller(heap, double upd_time, double upd_conf, int upd_idx):
     """
     top: (confidence, time, index)
@@ -30,26 +31,26 @@ cdef bint heap_top_is_smaller(heap, double upd_time, double upd_conf, int upd_id
     return False
 
 #@cython.profile(True)
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
-cdef add_to_heap(topkqueue, int topkcount, int upd_idx, double upd_time, double upd_conf, double upd_wlen):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef void add_to_heap(topkqueue, int topkcount, int upd_idx, double upd_time, double upd_conf, double upd_wlen):
     if len(topkqueue) < topkcount:
         heapq.heappush( topkqueue, (upd_conf, upd_time, upd_idx, upd_wlen) )    
     elif topkcount >0 and len(topkqueue) == topkcount and heap_top_is_smaller(topkqueue, upd_time, upd_conf, upd_idx) :                            
         heapq.heappushpop( topkqueue, (upd_conf, upd_time, upd_idx, upd_wlen) )
-    assert(len(topkqueue) <= topkcount)
+    #assert(len(topkqueue) <= topkcount)
 
 #@cython.profile(True)
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
-def process_session(updates_read, already_seen_ngts, updates, 
-                user_reading_speed, user_latency_tolerance,
-                ssn_start, ssn_reads, uti,
-                next_ssn_start, next_ssn_window_start,
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef process_session(updates_read, already_seen_ngts, updates, 
+                double user_reading_speed, double user_latency_tolerance,
+                double ssn_start, int ssn_reads, int uti,
+                double next_ssn_start, double next_ssn_window_start,
                 ssn_starts, # needed for alpha computation
                 topkqueue, topkcount):
     
-    session_msu = 0.0
+    cdef double session_msu = 0.0
     cdef double current_time = 0.0
 
     # logger.debug('session {}: start {}; reads {}'.format(uti, ssn_start, ssn_reads))
@@ -64,6 +65,14 @@ def process_session(updates_read, already_seen_ngts, updates,
     available_updates = available_updates[:ssn_reads]
     # logger.debug('available_updates {}'.format(available_updates))
     # logger.debug('topk count {} queue {}'.format(topkcount, topkqueue))
+
+    cdef double read_update_wlen = 0.0
+    cdef double upd_time_to_read = 0.0
+    cdef double read_update_msu = 0.0
+
+    cdef int alpha = 0
+    cdef int ngt_after = 0
+    cdef double ngt_msu = 0.0
 
     for ai in xrange(len(available_updates)): # for num_reads
         
@@ -108,15 +117,15 @@ def process_session(updates_read, already_seen_ngts, updates,
     return session_msu, topkqueue, topkcount
 
 #@cython.profile(True)
-#@cython.boundscheck(False)
-#@cython.wraparound(False)
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts, 
             update_times, update_confidences, update_lengths, updates,
-            user_reading_speed, user_latency_tolerance,
-            query_duration):
+            double user_reading_speed, double user_latency_tolerance,
+            double query_duration):
     
     user_topic_msu = 0.0
-    updates_read = defaultdict(bool)
+    updates_read = {}
     already_seen_ngts = {}        
     
     cdef int num_updates = len(update_times)    
@@ -128,6 +137,13 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
     cdef int uti = 0
     cdef int wsi = 0
     cdef int upd_idx = 0
+
+    cdef:
+        double ssn_start = 0.0
+        double next_ssn_start = 0.0
+        double next_ssn_window_start = 0.0
+        double session_msu = 0.0
+        int ssn_reads = 0
 
     while upd_idx < num_updates:
         # update = updates[upd_idx]
@@ -146,10 +162,11 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
         while uti < num_sessions and ssn_starts[uti] < update_times[upd_idx]:    
             # this is the first update beyond a session start
             # --> process this session
-            ssn_start, ssn_reads = user_trail[uti]
+            ssn_start = user_trail[uti][0]
+            ssn_reads = user_trail[uti][1]
             next_ssn_start = ssn_starts[uti+1] if uti +1 != num_sessions else query_duration            
             next_ssn_window_start = window_starts[uti+1] if uti +1 != num_sessions else query_duration
-            current_time = ssn_start
+            
             
             session_msu, topkqueue, topkcount = process_session(updates_read, already_seen_ngts, updates,
                                                     user_reading_speed, user_latency_tolerance,
