@@ -4,30 +4,34 @@ from collections import defaultdict
 import bisect
 import heapq
 import operator
-import math
 
-import logging
-logger = logging.getLogger(__name__)
 
-@cython.profile(True)
-def heap_top_is_smaller(heap, double upd_time, double upd_conf, int upd_idx):
+# import logging
+# logger = logging.getLogger(__name__)
+
+#@cython.profile(True)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
+cdef bint heap_top_is_smaller(heap, double upd_time, double upd_conf, int upd_idx):
     """
     top: (confidence, time, index)
     update: update object
     """
     if not heap:
         return True
-    top_conf, top_time, top_index, top_wlen = heap[0]
-    if top_conf < upd_conf:
+    # top_conf, top_time, top_index, top_wlen = heap[0]
+    if heap[0][0] < upd_conf:
         return True
-    if math.fabs(top_conf - upd_conf) < 1e-8:
-        if top_time < upd_time:
+    if abs(heap[0][0] - upd_conf) < 1e-8:
+        if heap[0][1] < upd_time:
             return True
-        if math.fabs(top_time - upd_time) < 1e-8:
-            return top_index < upd_idx
+        if abs(heap[0][1] - upd_time) < 1e-8:
+            return heap[0][2] < upd_idx
     return False
 
-@cython.profile(True)
+#@cython.profile(True)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def add_to_heap(topkqueue, int topkcount, int upd_idx, double upd_time, double upd_conf, double upd_wlen):
     if len(topkqueue) < topkcount:
         heapq.heappush( topkqueue, (upd_conf, upd_time, upd_idx, upd_wlen) )    
@@ -35,7 +39,9 @@ def add_to_heap(topkqueue, int topkcount, int upd_idx, double upd_time, double u
         heapq.heappushpop( topkqueue, (upd_conf, upd_time, upd_idx, upd_wlen) )
     assert(len(topkqueue) <= topkcount)
 
-@cython.profile(True)
+#@cython.profile(True)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def process_session(updates_read, already_seen_ngts, updates, 
                 user_reading_speed, user_latency_tolerance,
                 ssn_start, ssn_reads, uti,
@@ -101,7 +107,9 @@ def process_session(updates_read, already_seen_ngts, updates,
     # logger.debug('processed session msu ={}'.format(session_msu))
     return session_msu, topkqueue, topkcount
 
-@cython.profile(True)
+#@cython.profile(True)
+#@cython.boundscheck(False)
+#@cython.wraparound(False)
 def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts, 
             update_times, update_confidences, update_lengths, updates,
             user_reading_speed, user_latency_tolerance,
