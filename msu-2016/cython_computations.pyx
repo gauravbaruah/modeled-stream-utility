@@ -32,7 +32,7 @@ cdef bint heap_top_is_smaller(heap, double upd_time, double upd_conf, int upd_id
 #@cython.profile(True)
 #@cython.boundscheck(False)
 #@cython.wraparound(False)
-def add_to_heap(topkqueue, int topkcount, int upd_idx, double upd_time, double upd_conf, double upd_wlen):
+cdef add_to_heap(topkqueue, int topkcount, int upd_idx, double upd_time, double upd_conf, double upd_wlen):
     if len(topkqueue) < topkcount:
         heapq.heappush( topkqueue, (upd_conf, upd_time, upd_idx, upd_wlen) )    
     elif topkcount >0 and len(topkqueue) == topkcount and heap_top_is_smaller(topkqueue, upd_time, upd_conf, upd_idx) :                            
