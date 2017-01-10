@@ -9,6 +9,7 @@ from collections import defaultdict
 import operator
 import heapq
 import array
+
 from cython_computations import _compute_ranked_user_MSU
 
 from update import Update
@@ -24,9 +25,9 @@ import utils
 # logging setup
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
+#logger.setLevel(logging.WARNING)
 #logger.setLevel(logging.INFO)
-#logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.DEBUG)
 #logging.disable(logging.INFO)
 
 
@@ -68,6 +69,12 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         self.window_size = window_size
         self.fix_persistence = fix_persistence
         self.user_counter = 0
+
+    def initialize_structures_for_topic(self, topic_updates):
+        self.presort_updates(topic_updates)
+        self.update_emit_times = array.array('d', [ upd.time for upd in topic_updates ])
+        self.update_confidences = array.array('d', [ upd.conf for upd in topic_updates ] )
+        self.update_lengths = array.array('d', [upd.wlen for upd in topic_updates])
 
     def sample_users_from_population(self, query_duration):
         if self.sampled_users:

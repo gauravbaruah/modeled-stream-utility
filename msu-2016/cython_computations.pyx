@@ -9,6 +9,11 @@ import operator
 
 # import logging
 # logger = logging.getLogger(__name__)
+# ch = logging.StreamHandler()
+# ch.setLevel(logging.DEBUG)
+# formatter = logging.Formatter('%(levelname)s - %(message)s')
+# ch.setFormatter(formatter)
+# logger.addHandler(ch)
 
 #@cython.profile(True)
 @cython.boundscheck(False)
@@ -116,6 +121,29 @@ cdef process_session(updates_read, already_seen_ngts, updates,
     # logger.debug('processed session msu ={}'.format(session_msu))
     return session_msu, topkqueue, topkcount
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+cdef int find_max_heap_size(user_trail, window_starts, int num_sessions):    
+    cdef int wi = 0
+    cdef int ci = 0
+    cdef int heap_size = 0
+    cdef int max_heap_size = 0
+    # logger.debug('num_sessions {}'.format(num_sessions))
+    for wi in xrange(num_sessions):
+        # logger.debug('{}, w {}, s {}, check {} {}'.format(wi, window_starts[wi], user_trail[wi], ci, user_trail[ci]))
+        heap_size += user_trail[wi][1]
+        if max_heap_size < heap_size:
+            max_heap_size = heap_size
+        
+        while window_starts[wi] > user_trail[ci][0]:
+            heap_size -= user_trail[ci][1]
+            ci+=1
+        # logger.debug('heap_size {} {}'.format(heap_size, max_heap_size))
+        
+    return max_heap_size
+
+
+
 #@cython.profile(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -133,6 +161,9 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
             
     topkqueue = []
     cdef int topkcount = 0
+    
+    max_heap_size = find_max_heap_size(user_trail, window_starts, num_sessions)
+    # logger.debug('max_heap_size {}'.format(max_heap_size))
 
     cdef int uti = 0
     cdef int wsi = 0

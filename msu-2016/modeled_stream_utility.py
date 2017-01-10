@@ -162,6 +162,12 @@ class ModeledStreamUtility(object):
         # NOTE: this function needs to be implemented based on the user
         # interface model [see class MSUReverseChronoOrder]
         raise NotImplementedError 
+    
+    def initialize_structures_for_topic(self, topic_updates):
+        """
+        initialize/presort updates before computing MSU
+        """
+        raise NotImplementedError
 
     def compute_population_MSU(self, run, query_durns):
         """
@@ -197,17 +203,18 @@ class ModeledStreamUtility(object):
             
             topic_updates = run[qid]
 
-            logger.info('presorting updates')
-            self.presort_updates(topic_updates)
+            logger.info('presorting/initializing updates')
+            self.initialize_structures_for_topic(topic_updates)
+
+            
+            #self.presort_updates(topic_updates)
             
             # time stamps of updates are stored separately for efficient searching
             # bisect on objects works [NO] 
             # TODO: try with numpy.searchsorted on an array of  timestamps in
             # an array; also TODO: how to clear and delete numpy vars
             # extracting update times for faster search
-            self.update_emit_times = array.array('d', [ upd.time for upd in topic_updates ])
-            self.update_confidences = array.array('d', [ upd.conf for upd in topic_updates ] )
-            self.update_lengths = array.array('d', [upd.wlen for upd in topic_updates])
+            
                             
             # for users in population
             usercount = 0
@@ -288,6 +295,9 @@ class MSUReverseChronoOrder(ModeledStreamUtility, \
 
         self.sampled_users = []        
         self.update_emit_times = []
+
+    def initialize_structures_for_topic(self, topic_updates):
+        self.presort_updates(topic_updates)
 
     def sample_users_from_population(self, query_duration):
         if self.sampled_users:
