@@ -3,13 +3,19 @@
 
 #### Software dependencies
 1. [python-numpy](http://www.numpy.org/)
+2. [cython](http://cython.org)
 
 This code has been developed using a virtualenv with a numpy install.
 
 1. Create a python [virtualenv](https://virtualenv.pypa.io/en/latest/)
 2. ```source [your-virtual-env]/bin/activate```
 3. ```pip install numpy```
-4. run commands
+4. ```pip install cython```
+5. ```python setup.py build_ext --inplace```
+6. run commands
+
+Note: ```cython``` is needed for processing over complex user and interface models. 
+Complex interface models necessitate looping over all submitted updates; looping over lists is very slow in pure Python.
 
 ### Data Requirements
 
@@ -21,7 +27,7 @@ This code has been developed using a virtualenv with a numpy install.
 
 ### Code Layout
 
-```msu-2016``` : Main codebase <br>
+```msu-2016``` : **Main** codebase <br>
 ```├── Readme.md``` : This Readme.md <br>
 ```├── modeled_stream_utility.py``` : **main script** <br>
 ```├── nugget.py``` : nugget class for Temporal Summarization tracks <br>
@@ -32,6 +38,10 @@ This code has been developed using a virtualenv with a numpy install.
 ```├── user_model.py``` : user behavior model <br>
 ```├── user_interface_model.py``` : user interface models <br>
 ```├── utils.py``` : Utility functions  <br>
+
+```Cython```-ic files for complex user interface models <br>
+```├── cython_computations.pyx``` : defines a custom heap class and computes msu for ranked interfaces  <br>
+```├── setup.py``` : builds ```cython_computations``` library for importing into python code  <br>
 
 Files for comparing msu-2016 and sigir-2015 codebases (see [codebase-comparison](#Codebase-comparison))  <br>
 ```├── modeled_stream_utility_with_time_trails.py```: script to evaluate using time trails made by R (see [sigir-2015/Readme.md](../sigir-2015/Readme.md) ) <br>
