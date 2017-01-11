@@ -70,10 +70,18 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         self.fix_persistence = fix_persistence
         self.user_counter = 0
 
+    def normalize_confidences(self):
+        #logger.warning(self.update_confidences)
+        maxconf = max(self.update_confidences)
+        minconf = min(self.update_confidences)
+        self.update_confidences = array.array('d', map(lambda x: (x - minconf)/(maxconf - minconf), self.update_confidences))
+        #logger.warning(self.update_confidences)
+
     def initialize_structures_for_topic(self, topic_updates):
         self.presort_updates(topic_updates)
         self.update_emit_times = array.array('d', [ upd.time for upd in topic_updates ])
         self.update_confidences = array.array('d', [ upd.conf for upd in topic_updates ] )
+        self.normalize_confidences()
         self.update_lengths = array.array('d', [upd.wlen for upd in topic_updates])
 
     def sample_users_from_population(self, query_duration):
