@@ -191,7 +191,7 @@ class ModeledStreamUtility(object):
         # for each topic
         for qid in sorted(run.keys()):
 
-            logger.debug('topic ' + str(qid) + '----------')
+            logger.warning('topic ' + str(qid) + '----------')
             
             # reset the seed so that the same users are
             # generated every time sample_users_from_population() function is called

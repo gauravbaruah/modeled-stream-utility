@@ -25,10 +25,10 @@ import utils
 # logging setup
 import logging
 logger = logging.getLogger(__name__)
-#logger.setLevel(logging.WARNING)
+logger.setLevel(logging.WARNING)
 #logger.setLevel(logging.INFO)
-logger.setLevel(logging.DEBUG)
-#logging.disable(logging.INFO)
+#logger.setLevel(logging.DEBUG)
+
 
 
 ch = logging.StreamHandler()
@@ -95,9 +95,9 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
     
     def _compute_user_MSU(self, user_instance, updates):
         
-        self.user_counter += 1
-        if self.user_counter % 1000 == 0:
-            logger.warning('{0} users simulated'.format(self.user_counter))
+        # self.user_counter += 1
+        # if self.user_counter % 1000 == 0:
+        #     logger.warning('{0} users simulated'.format(self.user_counter))
 
         user_topic_msu = 0.0
 
@@ -105,21 +105,28 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         # - if in case a user reads till the start of the next session.
         #   - new ranked updates are shown when the new session starts
         #     - simulates that the user though persisting now wants new information (reload page because I am scraping the bottom here)
+        
+        #if self.user_counter == 23:
+            #logger.setLevel(logging.DEBUG)
 
         user_trail = user_instance.generate_user_trail(self.query_duration)
         # logger.debug('user_trail {}'.format(user_trail))        
         window_starts = array.array('d', map(lambda x: x[0] - self.window_size if x[0] - self.window_size >= 0.0 else 0.0, user_trail))
         if self.window_size == -1:
             window_starts = array.array('d', [0.0]*len(user_trail)) 
-        # logger.debug('window_starts {}'.format(window_starts))
+        # logger.debug('window_starts {}'.format(str(window_starts)))
         ssn_starts = array.array('d', [s for s,r in user_trail])
-        # logger.debug('ssn_starts {}'.format(ssn_starts))
+        # logger.debug('ssn_starts {}'.format(str(ssn_starts)))
         num_sessions = len(user_trail)
 
+        
+        # logger.debug('----------- user {} {}-------------------'.format(self.user_counter, user_instance))
+        
         user_topic_msu = _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts, 
             self.update_emit_times, self.update_confidences, self.update_lengths, updates,
             user_instance.V, user_instance.L, self.query_duration)
-                
+        # logger.debug(' user {} done'.format(self.user_counter))
+        
         return user_topic_msu
 
        

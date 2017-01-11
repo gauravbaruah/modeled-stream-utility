@@ -1,4 +1,5 @@
-# cython: profile=True
+# distutils: language=c++
+
 cimport cython
 import array
 from collections import defaultdict
@@ -13,11 +14,16 @@ from sys import maxint
 
 # import logging
 # logger = logging.getLogger(__name__)
+# logger.setLevel(logging.WARNING)
+# #logger.setLevel(logging.DEBUG)
+
+
 # ch = logging.StreamHandler()
 # ch.setLevel(logging.DEBUG)
 # formatter = logging.Formatter('%(levelname)s - %(message)s')
 # ch.setFormatter(formatter)
 # logger.addHandler(ch)
+
 
 cdef struct UpdateData:
     double conf
@@ -25,67 +31,168 @@ cdef struct UpdateData:
     int index
     double wlen
 
-    
+  
 
 cdef class UpdateHeap:
+    # sourced from https://interactivepython.org/runestone/static/pythonds/Trees/BinaryHeapImplementation.html
     cdef vector[UpdateData] minheap
     cdef vector[UpdateData] maxheap
     cdef int heap_size
-    cdef int max_heap_size
+    cdef int max_heap_size    
     cdef int topkcount
 
-    def __init__(self, int max_heap_size):
+    def __init__(self, int heap_size_limit):
         
-        for i in xrange(max_heap_size):
-            self.minheap.push_back(UpdateData(float("inf"),float("inf"),maxint,float("inf")))
-            self.maxheap.push_back(UpdateData(float("-inf"), float("-inf"), -1, float("-inf")))
+        for i in xrange(2*heap_size_limit):
+            self.minheap.push_back(UpdateData(float("inf"),float("inf"), 2**31-1,float("inf")))
+            self.maxheap.push_back(UpdateData(float("-inf"), float("-inf"), -(2**31-1), float("-inf")))
         self.heap_size = 0
-        self.topkcount = 0        
+        self.topkcount = 0 
+        self.max_heap_size = 0
 
-    cdef int update_topkcount(self, incr):
+
+    cdef int update_topkcount(self, int incr):
         self.topkcount += incr
         return self.topkcount
 
-    cdef minheappush(self, upd_data):
-        pass
-
-    cdef minheappushpop(self, upd_data):
-        pass
-
-    cdef re_minheapify(self, time_filter):
-        for upddata in self.maxheap:                            
-            if upddata.time > time_filter:
-                self.minheappush(upddata)
-        pass
-    
-    cdef maxheapify(self):
-        pass
-
-    cdef popmax(self):
-        pass
-    
-    cdef bint heap_top_is_smaller(self, double upd_time, double upd_conf, int upd_idx):
-        """
-        top: (confidence, time, index)
-        update: update object
-        """
-        if not self.minheap.size():
+    cdef bint is_key_smaller(self, UpdateData A, UpdateData B):
+        if A.conf < B.conf:
             return True
-        # top_conf, top_time, top_index, top_wlen = heap[0]
-        if self.minheap[0].conf < upd_conf:
-            return True
-        if abs(self.minheap[0].conf - upd_conf) < 1e-8:
-            if self.minheap[0].time < upd_time:
+        if abs(A.conf - B.conf) < 1e-8:
+            if A.time < B.time:
                 return True
-            if abs(self.minheap[0].time - upd_time) < 1e-8:
-                return self.minheap[0].index < upd_idx
+            if abs(A.time - B.time) < 1e-8:
+                return A.index < B.index
+        return False
+
+    cdef percUp(self, int i):
+        cdef UpdateData tmp
+        while i // 2 > 0:
+            if self.is_key_smaller(self.minheap[i], self.minheap[i//2]):
+                tmp = self.minheap[i//2]
+                self.minheap[i//2] = self.minheap[i]
+                self.minheap[i] = tmp
+            i = i//2
+    
+    cdef insert(self, UpdateData upd_data):
+        # logger.debug('UpdateHeap: inserting {}'.format(upd_data))
+        self.heap_size += 1
+        self.minheap[self.heap_size] = upd_data
+        self.percUp(self.heap_size)
+
+    cdef int get_smaller_child(self, int i):
+        if i*2 + 1 > self.heap_size:
+            return i*2
+        else:
+            if self.is_key_smaller(self.minheap[i*2],self.minheap[i*2 +1]):
+                return i*2
+            else:
+                return i*2+1
+
+    cdef percDown(self, int i):
+        cdef UpdateData tmp
+        while (i*2) < self.heap_size:
+            sc = self.get_smaller_child(i)
+            if not self.is_key_smaller(self.minheap[i], self.minheap[sc]):
+                tmp = self.minheap[i]
+                self.minheap[i] = self.minheap[sc]
+                self.minheap[sc] = tmp
+            i = sc
+
+    cdef push_into_topk(self, UpdateData upd_data):
+        self.minheap[1] = upd_data
+        self.percDown(1)        
+
+    cdef re_minheapify(self, double time_filter):
+        self.heap_size = 0        
+        cdef num_filtered = 0
+        for i in xrange(1, self.max_heap_size+1):
+            if self.maxheap[i].time > time_filter:                
+                self.insert(self.maxheap[i])
+            else:
+                num_filtered += 1
+                
+        self.max_heap_size = 0
+        # logger.debug('UpdateHeap: re_minheapify: num_filtered {}'.format(num_filtered))
+
+    # max heap functions --------------
+    cdef bint is_key_greater(self, UpdateData A, UpdateData B):
+        if A.conf > B.conf:
+            return True
+        if abs(A.conf - B.conf) < 1e-8:
+            if A.time > B.time:
+                return True
+            if abs(A.time - B.time) < 1e-8:
+                return A.index > B.index
+        return False
+
+    cdef _percUp_max(self, int i):
+        cdef UpdateData tmp
+        while i // 2 > 0:
+            if self.is_key_greater(self.maxheap[i], self.maxheap[i//2]):
+                tmp = self.maxheap[i//2]
+                self.maxheap[i//2] = self.maxheap[i]
+                self.maxheap[i] = tmp
+            i = i//2
+    
+    cdef _insert_max(self, UpdateData upd_data):
+        self.max_heap_size += 1
+        self.maxheap[self.max_heap_size] = upd_data
+        self._percUp_max(self.max_heap_size)
+
+    cdef int _get_greater_child_max(self, int i):
+        if i*2 + 1 > self.max_heap_size:
+            return i*2
+        else:
+            if self.is_key_greater(self.maxheap[i*2], self.maxheap[i*2 +1]):
+                return i*2
+            else:
+                return i*2+1
+
+    cdef _percDown_max(self, int i):
+        cdef UpdateData tmp
+        while (i*2) < self.max_heap_size:
+            sc = self._get_greater_child_max(i)
+            if not self.is_key_greater(self.maxheap[i], self.maxheap[sc]):
+                tmp = self.maxheap[i]
+                self.maxheap[i] = self.maxheap[sc]
+                self.maxheap[sc] = tmp
+            i = sc
+
+    cdef maxheapify(self):        
+        for i in xrange(1, self.heap_size+1):
+            self._insert_max(self.minheap[i])
+        # assert(self.heap_size == self.max_heap_size)
+
+    cdef UpdateData removemax(self):
+        cdef UpdateData ret = self.maxheap[1]
+        self.maxheap[1] = self.maxheap[self.max_heap_size]
+        self.heap_size -= 1
+        self.max_heap_size -= 1
+        
+        self._percDown_max(1) 
+        
+        return ret       
+    
+    cdef bint heap_top_is_smaller(self, double upd_time, double upd_conf, int upd_idx):        
+        if not self.minheap.size():
+            return True        
+        if self.minheap[1].conf < upd_conf:
+            return True
+        if abs(self.minheap[1].conf - upd_conf) < 1e-8:
+            if self.minheap[1].time < upd_time:
+                return True
+            if abs(self.minheap[1].time - upd_time) < 1e-8:
+                return self.minheap[1].index < upd_idx
         return False
 
     cdef void add_to_heap(self, int upd_idx, double upd_time, double upd_conf, double upd_wlen):
-        if self.heap_size < self.topkcount:
-            self.minheappush( UpdateData(upd_conf, upd_time, upd_idx, upd_wlen) )            
+        if self.heap_size < self.topkcount:            
+            self.insert( UpdateData(upd_conf, upd_time, upd_idx, upd_wlen) )            
+            # logger.debug('UpdateHeap: add_to_heap: default insert')
         elif self.topkcount >0 and self.heap_size == self.topkcount and self.heap_top_is_smaller(upd_time, upd_conf, upd_idx) :
-            self.minheappushpop( UpdateData(upd_conf, upd_time, upd_idx, upd_wlen) )        
+            self.push_into_topk(UpdateData(upd_conf, upd_time, upd_idx, upd_wlen) )        
+            # logger.debug('UpdateHeap: add_to_heap: topk insert')
     
 
 #@cython.profile(True)
@@ -103,13 +210,14 @@ cdef process_session(updates_read, already_seen_ngts, updates,
 
     # logger.debug('session {}: start {}; reads {}'.format(uti, ssn_start, ssn_reads))
 
-    #available_updates = sorted(topkqueue, key=operator.itemgetter(0), reverse=True)  
-    topkqueue.maxheapify()              
-        
     topkqueue.update_topkcount(-ssn_reads)
-    
-    # logger.debug('available_updates {}'.format(available_updates))
-    # logger.debug('topk count {} queue {}'.format(topkcount, topkqueue))
+    if topkqueue.heap_size == 0:
+        # logger.debug('nothing in heap. return 0.0')
+        return 0.0
+
+    topkqueue.maxheapify()              
+            
+    # logger.debug('topk count {}: maxqueue {} {}'.format(topkqueue.topkcount, topkqueue.max_heap_size, [ (e.conf, e.index) for e in topkqueue.maxheap][:topkqueue.max_heap_size+1]))
 
     cdef double read_update_wlen = 0.0
     cdef double upd_time_to_read = 0.0
@@ -120,10 +228,12 @@ cdef process_session(updates_read, already_seen_ngts, updates,
     cdef double ngt_msu = 0.0
 
     #for ai in xrange(len(available_updates)): # for num_reads
-    while ssn_reads >0:
+    while ssn_reads >0 and topkqueue.max_heap_size > 0:
+        # logger.debug('starting to read {}; max_heap_size {}'.format(ssn_reads, topkqueue.max_heap_size))
         ssn_reads -= 1
-
-        upddata = topkqueue.maxheap[0]
+        
+        upddata = topkqueue.maxheap[1]
+        # logger.debug(upddata)
 
         read_update_wlen = upddata.wlen
         
@@ -132,15 +242,17 @@ cdef process_session(updates_read, already_seen_ngts, updates,
 
         if current_time > next_ssn_start:
             # user persisted in reading upto the start of the next session
-            # logger.info('user persisted in reading upto the start of the next session')
+            # logger.debug('user persisted in reading upto the start of the next session')
             
             break
         
         updates_read[upddata.index] = True
-        topkqueue.popmax()
-        # logger.debug('read update {}'.format(read_update))
+        # logger.debug('before removemax')
+        topkqueue.removemax()        
+        # logger.debug('removed maxtop. maxqueue {} {}'.format(topkqueue.max_heap_size, [ (e.conf, e.index) for e in topkqueue.maxheap]))
         
         read_update = updates[upddata.index]
+        # logger.debug('read update {}'.format(read_update))
         read_update_msu = 0.0
         # check for nuggets and update user msu
         for ngt in read_update.nuggets:
@@ -158,6 +270,7 @@ cdef process_session(updates_read, already_seen_ngts, updates,
     # logger.debug('processed session msu ={}'.format(session_msu))
 
     topkqueue.re_minheapify(next_ssn_window_start)
+    # logger.debug('after re-minheap {} {}'.format(topkqueue.heap_size, [ (e.conf, e.index) for e in topkqueue.minheap][:topkqueue.heap_size+1]))
     return session_msu
 
 
@@ -168,9 +281,9 @@ cdef int find_max_heap_size(user_trail, window_starts, int num_sessions):
     cdef int ci = 0
     cdef int heap_size = 0
     cdef int max_heap_size = 0
-    # logger.debug('num_sessions {}'.format(num_sessions))
+    # # logger.debug('num_sessions {}'.format(num_sessions))
     for wi in xrange(num_sessions):
-        # logger.debug('{}, w {}, s {}, check {} {}'.format(wi, window_starts[wi], user_trail[wi], ci, user_trail[ci]))
+        # # logger.debug('{}, w {}, s {}, check {} {}'.format(wi, window_starts[wi], user_trail[wi], ci, user_trail[ci]))
         heap_size += user_trail[wi][1]
         if max_heap_size < heap_size:
             max_heap_size = heap_size
@@ -178,7 +291,7 @@ cdef int find_max_heap_size(user_trail, window_starts, int num_sessions):
         while window_starts[wi] > user_trail[ci][0]:
             heap_size -= user_trail[ci][1]
             ci+=1
-        # logger.debug('heap_size {} {}'.format(heap_size, max_heap_size))
+        # # logger.debug('heap_size {} {}'.format(heap_size, max_heap_size))
         
     return max_heap_size
 
@@ -192,6 +305,9 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
             double user_reading_speed, double user_latency_tolerance,
             double query_duration):
     
+    # if user_index == 23:
+    #     logger.setLevel(logging.DEBUG)
+
     user_topic_msu = 0.0
     updates_read = {}
     already_seen_ngts = {}        
@@ -200,14 +316,13 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
     cdef int num_sessions = len(user_trail)
             
     #topkqueue = []
-    cdef int topkcount = 0
+    #cdef int topkcount = 0
     
-    max_heap_size = find_max_heap_size(user_trail, window_starts, num_sessions)
-    # logger.debug('max_heap_size {}'.format(max_heap_size))
-    #cdef UpdateData *topkqueue = <UpdateData*>malloc(max_heap_size * sizeof(UpdateData))
-    cdef UpdateHeap topkqueue = UpdateHeap(max_heap_size);
-    
-
+    heap_size_limit = find_max_heap_size(user_trail, window_starts, num_sessions)
+    # logger.debug('heap_size_limit {}'.format(heap_size_limit))    
+    cdef UpdateHeap topkqueue = UpdateHeap(heap_size_limit);
+    # logger.debug('made the queue')
+        
     cdef int uti = 0
     cdef int wsi = 0
     cdef int upd_idx = 0
@@ -223,7 +338,7 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
         # update = updates[upd_idx]
         
         # logger.debug('-------')
-        # logger.debug('update {}: {}'.format(upd_idx, update))
+        # logger.debug('update {}: {}'.format(upd_idx, updates[upd_idx]))
 
 
         # check for window starts
@@ -232,7 +347,7 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
             topkqueue.update_topkcount(user_trail[wsi][1])
             # logger.debug('window {} started; needs {} '.format(wsi, user_trail[wsi][1]))
             wsi += 1
-        # logger.debug('topkcount {}'.format(topkcount))
+        # logger.debug('topkcount {}'.format(topkqueue.topkcount))
 
         while uti < num_sessions and ssn_starts[uti] < update_times[upd_idx]:    
             # this is the first update beyond a session start
@@ -258,15 +373,21 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
 
         topkqueue.add_to_heap(upd_idx,
             update_times[upd_idx], update_confidences[upd_idx], update_lengths[upd_idx])
-        # logger.debug('adding update {} to queue'.format(upd_idx))
-        ## logger.debug('topkqueue {}'.format(topkqueue))
+        # logger.debug('checking/added update {} to queue {} {}'.format(upd_idx, topkqueue.heap_size, [(e.conf, e.index) for e in topkqueue.minheap][:topkqueue.heap_size+1]))
+        
         upd_idx += 1            
 
     # handle sessions beyond the last update
-    # if upd_idx >= len(updates):
+    if upd_idx >= len(updates):
         # logger.debug('all updates processed.')        
+        pass
     while uti < num_sessions:
         # logger.debug('processing leftover session')
+        ssn_start = user_trail[uti][0]
+        ssn_reads = user_trail[uti][1]
+        next_ssn_start = ssn_starts[uti+1] if uti +1 != num_sessions else query_duration            
+        next_ssn_window_start = window_starts[uti+1] if uti +1 != num_sessions else query_duration
+        
         session_msu = process_session(updates_read, already_seen_ngts, updates,
                                                 user_reading_speed, user_latency_tolerance,
                                                 ssn_start, ssn_reads, uti,
@@ -277,14 +398,11 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
         if len(updates_read) == num_updates:
             # logger.debug('read all updates')
             break
-        if topkcount < 0:
+        if topkqueue.topkcount < 0:
             # logger.debug('no more updates left to satisfy user needs')
             break
         uti += 1
-
-    # logger.debug( str(user_instance) )
-    # logger.debug(user_topic_msu)
-
-    #free(topkqueue)
     
+    # logger.debug('user_topic_msu {}'.format(user_topic_msu))
+
     return user_topic_msu
