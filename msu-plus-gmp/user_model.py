@@ -172,6 +172,7 @@ class LognormalAwayRBPPersistenceUserModel(object):
                 duration = query_duration - current_time
         return duration
 
+    # TODO: this function needs to be moved to the user interface module
     def generate_user_trail(self, query_duration):
         """
         return [(session_start, num_read),] tuples based on user model parameters

@@ -10,6 +10,9 @@ from collections import defaultdict
 import numpy as np
 import sys
 
+from user_model import LognormalAwayRBPPersistenceUserModel
+#from cython_computations import _generate_push_model_user_trail
+
 class UserInterfaceMixin(object):
     """
     Models the user interface presented to a user at each session.
@@ -107,12 +110,14 @@ class RankedInterfaceMixin(UserInterfaceMixin):
     update.confidence
     """
 
-    # TODO: there can be 2 kinds of ranked interface
+    # there can be 3 kinds of ranked interface
     # 1. rank only the updates that were generated between two sessions by the
     # user
     # 2. rank all unread updates - including those from previous sessions.
     # This requires a map to be stored for all updates that have already been
     # read.
+    # 3. rank unread updates from a prior window preceding the session
+    # NOTE: currently we have implemented option 3 with partial support for option 2
 
     def __init__(self):
         super(RankedInterfaceMixin, self).__init__()
@@ -181,6 +186,56 @@ class RankedInterfaceMixin(UserInterfaceMixin):
         elif self.heap_top_is_smaller(topkqueue, update, upd_idx) and len(topkqueue) == topkcount:                            
             heapq.heappushpop( topkqueue, (update.conf, update.time, update.updid, upd_idx) )
         assert(len(topkqueue) <= topkcount)
+
+    
+class PushRankedInterfaceMixin(RankedInterfaceMixin):
+    """
+    Models an interface where push notifications are sent by the system
+    and the user may then read updates presented in a ranked order
+    """
+    def __init__(self):
+        super(PushRankedInterfaceMixin, self).__init__()
+        self.conf_heap = []
+
+    def update_presentation_order(self, oldest_available_update_index, most_recent_update_index, updates):
+        # TODO: this is a legacy function. code needs refactoring
+        pass
+
+    def generate_user_trail(self, user_instance, update_confs, update_times, query_duration, push_threshold=0.0, only_push=False):
+        """
+        generates a trail of user behaviour given system actions (e.g. push notifications)
+        push_threshold == 0.0 explicitly pushes each update
+        """
+        #return _generate_push_model_user_trail(user_instance.A, user_instance.P, update_confs, update_times, query_duration, push_threshold, only_push)
+        
+        sessions = []       
+        current_time = 0.0
+        ui = 0
+        
+        if not only_push:
+            # regular sessions
+            while current_time < query_duration:
+                # read one update
+                num_read = 1
+
+                while np.random.random() < user_instance.P:
+                    num_read += 1
+
+                sessions.append( (current_time, num_read, 0) )
+                time_away = user_instance.get_next_time_away_duration(current_time, query_duration)
+                current_time += time_away 
+
+        # push notification sessions
+        for ui in xrange(len(update_confs)):
+            if update_confs[ui] >= push_threshold:
+                num_read = 1
+                while np.random.random() < user_instance.P:  
+                    num_read += 1
+                sessions.append((update_times[ui], num_read, 1))
+        
+        sessions.sort(key=lambda x: x[0])
+        return sessions
+
 
 if __name__ == "__main__":
 

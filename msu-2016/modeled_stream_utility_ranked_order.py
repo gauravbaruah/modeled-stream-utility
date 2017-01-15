@@ -217,7 +217,7 @@ if __name__ == '__main__':
             exit(0)
 
         logger.warning('computing MSU...')
-        run_msu = MSU.compute_population_MSU(run, query_durns)
+        run_msu, run_pain = MSU.compute_population_MSU(run, query_durns)
         # TODO: keep track of all the nuggets found
         
         printkeys = None
@@ -230,4 +230,6 @@ if __name__ == '__main__':
         
         for topic in printkeys:
             msu = run_msu[topic]
-            print '%s\t%s\t%s' % (os.path.basename(runfile), str(topic), str(msu))
+            pain = run_pain[topic]
+            print '%s\t%s\t%s' % (os.path.basename(runfile), str(topic), str(msu), )
+            print '{}\t{}\t{:.3f}\t{:.3f}'.format(os.path.basename(runfile), topic, msu, pain)

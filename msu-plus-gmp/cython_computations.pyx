@@ -10,6 +10,9 @@ from libc.stdlib cimport malloc, free
 from cpython.mem cimport PyMem_Malloc, PyMem_Realloc, PyMem_Free
 from libcpp.vector cimport vector
 
+import numpy
+
+
 from sys import maxint
 
 # import logging
@@ -198,7 +201,7 @@ cdef class UpdateHeap:
 #@cython.profile(True)
 @cython.boundscheck(False)
 @cython.wraparound(False)
-cdef process_session(updates_read, already_seen_ngts, updates, 
+cdef tuple process_session(updates_read, already_seen_ngts, updates, 
                 double user_reading_speed, double user_latency_tolerance,
                 double ssn_start, int ssn_reads, int uti,
                 double next_ssn_start, double next_ssn_window_start,
@@ -206,6 +209,7 @@ cdef process_session(updates_read, already_seen_ngts, updates,
                 UpdateHeap topkqueue):
     
     cdef double session_msu = 0.0
+    cdef double session_pain = 0.0
     cdef double current_time = 0.0
 
     # logger.debug('session {}: start {}; reads {}'.format(uti, ssn_start, ssn_reads))
@@ -213,7 +217,7 @@ cdef process_session(updates_read, already_seen_ngts, updates,
     topkqueue.update_topkcount(-ssn_reads)
     if topkqueue.heap_size == 0:
         # logger.debug('nothing in heap. return 0.0')
-        return 0.0
+        return 0.0, 0.0
 
     topkqueue.maxheapify()              
             
@@ -267,11 +271,14 @@ cdef process_session(updates_read, already_seen_ngts, updates,
             read_update_msu += ngt_msu
         
         session_msu += read_update_msu
+
+        if not read_update.nuggets:
+            session_pain += 1.0
     # logger.debug('processed session msu ={}'.format(session_msu))
 
     topkqueue.re_minheapify(next_ssn_window_start)
     # logger.debug('after re-minheap {} {}'.format(topkqueue.heap_size, [ (e.conf, e.index) for e in topkqueue.minheap][:topkqueue.heap_size+1]))
-    return session_msu
+    return session_msu, session_pain
 
 
 @cython.boundscheck(False)
@@ -358,7 +365,7 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
             next_ssn_window_start = window_starts[uti+1] if uti +1 != num_sessions else query_duration
             
             
-            session_msu = process_session(updates_read, already_seen_ngts, updates,
+            session_msu, session_pain = process_session(updates_read, already_seen_ngts, updates,
                                                     user_reading_speed, user_latency_tolerance,
                                                     ssn_start, ssn_reads, uti,
                                                     next_ssn_start, next_ssn_window_start,
@@ -388,13 +395,14 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
         next_ssn_start = ssn_starts[uti+1] if uti +1 != num_sessions else query_duration            
         next_ssn_window_start = window_starts[uti+1] if uti +1 != num_sessions else query_duration
         
-        session_msu = process_session(updates_read, already_seen_ngts, updates,
+        session_msu, session_pain = process_session(updates_read, already_seen_ngts, updates,
                                                 user_reading_speed, user_latency_tolerance,
                                                 ssn_start, ssn_reads, uti,
                                                 next_ssn_start, next_ssn_window_start,
                                                 ssn_starts,
                                                 topkqueue)
         user_topic_msu += session_msu
+        user_topic_pain += session_pain
         if len(updates_read) == num_updates:
             # logger.debug('read all updates')
             break
@@ -405,4 +413,162 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
     
     # logger.debug('user_topic_msu {}'.format(user_topic_msu))
 
-    return user_topic_msu
+    return user_topic_msu, user_topic_pain
+
+
+# cdef get_next_time_away_duration(self, current_time=None, query_duration=None):
+#         """
+#         returns a single time away duration
+#         if current_time and query_duration are specified, the generated
+#             time away length is truncated if it exceeds the query_duration
+#         else
+#             a single duration is returned
+#         """
+#         cdef duration = self.A_exp.get_random_sample()
+#         if current_time and query_duration:
+#             current_time = float(current_time)
+#             query_duration = float(query_duration)
+#             if current_time + duration > query_duration:
+#                 duration = query_duration - current_time
+#         return duration
+
+
+# def _generate_push_model_user_trail(double user_A, double user_P, update_confs, update_times, double query_duration, double push_threshold, bint only_push):
+#     sessions = []       
+#     cdef double current_time = 0.0
+#     cdef int ui = 0
+    
+#     if not only_push:
+#         # regular sessions
+#         while current_time < query_duration:
+#             # read one update
+#             num_read = 1
+
+#             while numpy.random.random() < user_P:
+#                 num_read += 1
+
+#             sessions.append( (current_time, num_read, 0) )
+#             time_away = get_next_time_away_duration(current_time, query_duration)
+#             current_time += time_away 
+
+#     # push notification sessions
+#     for ui in xrange(len(update_confs)):
+#         if update_confs[ui] >= push_threshold:
+#             num_read = 1
+#             while numpy.random.random() < user_P:  
+#                 num_read += 1
+#             sessions.append(update_times[ui], num_read, 1)
+    
+#     sessions.sort(key=lambda x: x[0])
+#     return sessions
+
+    
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def _compute_push_ranked_user_MSU(user_trail, window_starts, ssn_starts, 
+            update_times, update_confidences, update_lengths, updates,
+            double user_reading_speed, double user_latency_tolerance,
+            double query_duration):
+    
+    # if user_index == 23:
+    #     logger.setLevel(logging.DEBUG)
+
+    cdef double user_topic_msu = 0.0
+    cdef double user_topic_pain = 0.0
+    updates_read = {}
+    already_seen_ngts = {}        
+    
+    cdef int num_updates = len(update_times)    
+    cdef int num_sessions = len(user_trail)
+            
+    cdef int heap_size_limit = find_max_heap_size(user_trail, window_starts, num_sessions)
+    # logger.debug('heap_size_limit {}'.format(heap_size_limit))    
+    cdef UpdateHeap topkqueue = UpdateHeap(heap_size_limit);
+    # logger.debug('made the queue')
+        
+    cdef int uti = 0
+    cdef int wsi = 0
+    cdef int upd_idx = 0
+
+    cdef:
+        double ssn_start = 0.0
+        double next_ssn_start = 0.0
+        double next_ssn_window_start = 0.0
+        double session_msu = 0.0
+        int ssn_reads = 0
+
+    while upd_idx < num_updates:
+        # update = updates[upd_idx]
+        
+        # logger.debug('-------')
+        # logger.debug('update {}: {}'.format(upd_idx, updates[upd_idx]))
+
+        topkqueue.add_to_heap(upd_idx,
+            update_times[upd_idx], update_confidences[upd_idx], update_lengths[upd_idx])
+        # logger.debug('checking/added update {} to queue {} {}'.format(upd_idx, topkqueue.heap_size, [(e.conf, e.index) for e in topkqueue.minheap][:topkqueue.heap_size+1]))
+
+
+        # check for window starts
+        while wsi < num_sessions and (abs(window_starts[wsi] - update_times[upd_idx]) < 1e-8 or window_starts[wsi] - update_times[upd_idx] < 1e-8):
+            #topkcount += user_trail[wsi][1]
+            topkqueue.update_topkcount(user_trail[wsi][1])
+            # logger.debug('window {} started; needs {} '.format(wsi, user_trail[wsi][1]))
+            wsi += 1
+        # logger.debug('topkcount {}'.format(topkqueue.topkcount))
+
+        while uti < num_sessions and (abs(ssn_starts[uti] - update_times[upd_idx]) < 1e-8 or ssn_starts[uti] - update_times[upd_idx] < 1e-8):    
+            # this is the first update beyond a session start
+            # --> process this session
+            ssn_start = user_trail[uti][0]
+            ssn_reads = user_trail[uti][1]
+            next_ssn_start = ssn_starts[uti+1] if uti +1 != num_sessions else query_duration            
+            next_ssn_window_start = window_starts[uti+1] if uti +1 != num_sessions else query_duration
+            
+            
+            session_msu, session_pain = process_session(updates_read, already_seen_ngts, updates,
+                                                    user_reading_speed, user_latency_tolerance,
+                                                    ssn_start, ssn_reads, uti,
+                                                    next_ssn_start, next_ssn_window_start,
+                                                    ssn_starts,
+                                                    topkqueue)
+            user_topic_msu += session_msu
+            user_topic_pain += session_pain
+            uti += 1
+
+        if uti == num_sessions:
+            # logger.debug('all sessions processed')
+            break
+
+        upd_idx += 1            
+
+    # handle sessions beyond the last update
+    if upd_idx >= len(updates):
+        # logger.debug('all updates processed.')        
+        pass
+    while uti < num_sessions:
+        # logger.debug('processing leftover session')
+        ssn_start = user_trail[uti][0]
+        ssn_reads = user_trail[uti][1]
+        next_ssn_start = ssn_starts[uti+1] if uti +1 != num_sessions else query_duration            
+        next_ssn_window_start = window_starts[uti+1] if uti +1 != num_sessions else query_duration
+        
+        session_msu, session_pain = process_session(updates_read, already_seen_ngts, updates,
+                                               user_reading_speed, user_latency_tolerance,
+                                                ssn_start, ssn_reads, uti,
+                                                next_ssn_start, next_ssn_window_start,
+                                                ssn_starts,
+                                                topkqueue)
+        user_topic_msu += session_msu
+        user_topic_pain += session_pain
+        if len(updates_read) == num_updates:
+            # logger.debug('read all updates')
+            break
+        if topkqueue.topkcount < 0:
+            # logger.debug('no more updates left to satisfy user needs')
+            break
+        uti += 1
+    
+    # logger.debug('user_topic_msu {}'.format(user_topic_msu))
+
+    return user_topic_msu, user_topic_pain
+

@@ -49,7 +49,7 @@ class ModeledStreamUtility(object):
         self.num_users = num_users
     
     @staticmethod
-    def load_run_and_attach_gain(runfile, updlens, nuggets, matches, useAverageLengths, track, query_durns):
+    def load_run_and_attach_gain(runfile, updlens, nuggets, matches, useAverageLengths, track, query_durns, pool, restrict_to_pool = False):
         """
         This function attaches gain (nuggets) to sentences of a run, on the fly
         """
@@ -61,6 +61,9 @@ class ModeledStreamUtility(object):
                 if track == 'ts14':
                     qid = 'TS14.'+qid
                 updid = docid + '-' + sentid
+                if restrict_to_pool and updid not in pool[qid] :
+                    continue
+                    
                 updtime = float(updtime) - query_durns[qid][0] # timestamps to start from 0               
                 confidence = float(confidence)
                 updlen = 30 if not useAverageLengths else updlens[qid]["topic.avg.update.length"]     #default updlen is 30
@@ -186,6 +189,7 @@ class ModeledStreamUtility(object):
         # intermediate MSUs for users and topics
         msu_user_topic = np.zeros( (self.num_users, len(run.keys())),
             dtype=float)
+        pain_user_topic = np.zeros( (self.num_users, len(run.keys())), dtype=float)
         tpc_idx = dict( [ (t, i) for i, t in enumerate(sorted(run.keys())) ] )
 
         # for each topic
@@ -225,11 +229,12 @@ class ModeledStreamUtility(object):
                 user_sim = self.sampled_users[usercount]
                 
                 # compute MSU for this user_sim for this topic qid
-                user_msu = self._compute_user_MSU(user_sim, topic_updates)
-                logger.debug(str(usercount) + str(user_sim) + str(user_msu))
+                user_msu, user_pain = self._compute_user_MSU(user_sim, topic_updates)
+                logger.debug('user {} {} gain {} pain {}'.format(usercount, user_sim, user_msu, user_pain))
                 
                 # store for each user and topic
                 msu_user_topic[usercount][tpc_idx[qid]] = user_msu
+                pain_user_topic[usercount][tpc_idx[qid]] = user_pain
                 #logger.debug('{0} {1}'.format(user_sim, user_msu))                
                 #logger.debug('USERMSU:\t{}\t{}\t{}'.format(usercount+1, qid, user_msu))
                 
@@ -247,14 +252,16 @@ class ModeledStreamUtility(object):
         
         # compute average MSU per topic for each user
         user_msu_per_topic = np.zeros(self.num_users, dtype=float)
+        user_pain_per_topic = np.zeros(self.num_users, dtype=float)
         for u in xrange(self.num_users):
             user_msu_per_topic[u] = np.mean(msu_user_topic[u], dtype=float)
+            user_pain_per_topic[u] = np.mean(pain_user_topic[u], dtype=float)
         ##user_msu_per_topic = np.mean(msu_user_topic, dtype=float, axis=1)
-        logger.info('user msu/topic')
-        logger.info( str(user_msu_per_topic) )
-
-
+        logger.info('user msu/topic {}'.format(user_msu_per_topic))
+        logger.info('user pain/topic {}'.format(user_pain_per_topic))
+        
         topic_msu_per_user = np.mean(msu_user_topic, dtype=float, axis=0)
+        topic_pain_per_user = np.mean(pain_user_topic, dtype=float, axis=0)
         # logger.info('topic msu/user')
         # logger.info( str(topic_msu_per_user) )
         # logger.info('topic {0} (idx {1}) msu = {2}'.format(qid, tpc_idx[qid], topic_msu))
@@ -262,14 +269,18 @@ class ModeledStreamUtility(object):
 
         # mean MSU across all users
         msu_per_user = np.mean(user_msu_per_topic, dtype=float)
+        pain_per_user = np.mean(user_pain_per_topic, dtype=float)
         
         run_msu = {}
+        run_pain = {}
         for qid in sorted(run.keys()):
             run_msu[qid] = topic_msu_per_user[tpc_idx[qid]]
+            run_pain[qid] = topic_pain_per_user[tpc_idx[qid]]
         run_msu["AVG"] = msu_per_user
+        run_pain["AVG"] = pain_per_user
         
         #return msu_per_user
-        return run_msu
+        return run_msu, run_pain
 
 
 class MSUReverseChronoOrder(ModeledStreamUtility, \

@@ -7,20 +7,27 @@ import xml.etree.ElementTree as ET
 import sys
 
 def read_in_pool_file(pool_file):
+    pool = {}
     duplicates = {}
     with open(pool_file) as pf:
         line = pf.readline()    #header
         for line in pf:
             qid, updid, doc_id, sentence_id, update_len, duplicate_of_id, update_text = line.strip().split('\t')
             #qid = int(qid)
-            if qid not in duplicates:
+            if qid not in duplicates or qid not in pool:
                 duplicates[qid] = {}
-            if duplicate_of_id == "NULL": # not a duplicate
+                pool[qid] = {}
+
+            if updid not in pool[qid]:
+                pool[qid] =  set()
+            pool[qid].add(updid)
+            
+            if duplicate_of_id == "NULL": # not a duplicate                
                 continue
             if duplicate_of_id not in duplicates[qid]:
                 duplicates[qid][duplicate_of_id] = set()
             duplicates[qid][duplicate_of_id].add(updid)  #updid is duplicate_of upd with id
-    return duplicates
+    return pool, duplicates
     
 def read_in_matches_track_duplicates(matches_file, duplicates):
     matches = {}
