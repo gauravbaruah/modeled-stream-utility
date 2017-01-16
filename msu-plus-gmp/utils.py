@@ -16,10 +16,8 @@ def read_in_pool_file(pool_file):
             #qid = int(qid)
             if qid not in duplicates or qid not in pool:
                 duplicates[qid] = {}
-                pool[qid] = {}
+                pool[qid] = set()
 
-            if updid not in pool[qid]:
-                pool[qid] =  set()
             pool[qid].add(updid)
             
             if duplicate_of_id == "NULL": # not a duplicate                

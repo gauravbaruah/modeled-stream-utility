@@ -53,6 +53,7 @@ class ModeledStreamUtility(object):
         """
         This function attaches gain (nuggets) to sentences of a run, on the fly
         """
+
         run = {}        
         with open(runfile) as rf:
             for line in rf:
@@ -61,9 +62,13 @@ class ModeledStreamUtility(object):
                 if track == 'ts14':
                     qid = 'TS14.'+qid
                 updid = docid + '-' + sentid
-                if restrict_to_pool and updid not in pool[qid] :
+                
+                if qid not in pool:
                     continue
-                    
+
+                if restrict_to_pool and updid not in pool[qid] :                    
+                    continue
+
                 updtime = float(updtime) - query_durns[qid][0] # timestamps to start from 0               
                 confidence = float(confidence)
                 updlen = 30 if not useAverageLengths else updlens[qid]["topic.avg.update.length"]     #default updlen is 30
@@ -75,6 +80,7 @@ class ModeledStreamUtility(object):
                 
                 if qid not in run:
                     run[qid] = []
+                    
                     
                 #gain for update
                 ngtstr = ""
