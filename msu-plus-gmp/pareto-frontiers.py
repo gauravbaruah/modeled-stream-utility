@@ -25,6 +25,8 @@ def plot_graph(points, colorcodes, title_text, frontier):
     return fig
 
 def get_pareto_frontier(points):
+    # http://math.stackexchange.com/questions/101125/how-to-compute-the-pareto-frontier-intuitively-speaking/101141
+    
     points.sort()
     frontier = [points[0]]
     for i in xrange(1, len(points)):
