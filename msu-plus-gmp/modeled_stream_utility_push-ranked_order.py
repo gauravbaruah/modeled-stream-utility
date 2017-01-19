@@ -25,8 +25,8 @@ import utils
 # logging setup
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
-#logger.setLevel(logging.INFO)
+#logger.setLevel(logging.WARNING)
+logger.setLevel(logging.INFO)
 #logger.setLevel(logging.DEBUG)
 
 
@@ -134,7 +134,7 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
         
         #if self.user_counter == 23:
             #logger.setLevel(logging.DEBUG)
-        logger.warning('user {}'.format(user_instance))
+        #logger.warning('user {}'.format(user_instance))
 
         user_trail = self.generate_user_trail(user_instance, self.update_confidences, self.update_emit_times, self.query_duration, self.push_threshold, self.only_push)
         # logger.debug('user_trail {}'.format(user_trail))        
@@ -161,12 +161,13 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
 if __name__ == '__main__':
 
     ap = argparse.ArgumentParser(description="computes MSU for systems while presenting a ranked order of updates at each user session")
-    ap.add_argument("track", choices=["ts13", "ts14"])
-    ap.add_argument("-m", "--matchesFile")
-    ap.add_argument("-n", "--nuggetsFile")
-    ap.add_argument("--poolFile") 
+    ap.add_argument("track", choices=["ts13", "ts14", "mb15"])
+    ap.add_argument("-m", "--matchesFile", help="the qrel file (for tweets) or the matches file (for updates)")
+    ap.add_argument("-n", "--nuggetsFile", help="the clusters file (for tweets) or the nuggets file (for updates)")
+    ap.add_argument("--poolFile", help="needed for the TS tracks for tracking duplicates and if --restrict_runs_to_pool is active ") 
     ap.add_argument("-t", "--track_topics_file") # to set time to begin at 0 seconds   
     ap.add_argument("-l", "--update_lengths_folder", help="should contain \"<qid>*.len\" files containing (qid, updid, charlen, wordlen) columns per line") # update lengths are required for each update    
+    ap.add_argument("--tweetEpochFile", help="tweet2dayepoch file needed for emit times of tweet ")
     ap.add_argument("-u", "--num_users", type=int, default=1)    
     ap.add_argument("-Apop", "--time_away_population_params", nargs=2, type=float, help="population time away mean and stddev", default=[10800.0, 5400.0])
     ap.add_argument("-Ppop", "--persistence_population_params", nargs=2, type=float, help="population RBP persistence mean and stddev", default=[0.2, 0.2])
@@ -186,53 +187,77 @@ if __name__ == '__main__':
     args = ap.parse_args()
     print >> sys.stderr, args
         
-    if 'ts' in args.track:
+    if args.track in ['ts13', 'ts14']:
         if None in [args.nuggetsFile, args.matchesFile, args.poolFile, args.update_lengths_folder, args.track_topics_file]:
             logger.error('arguments -n -m --poolFile -t -l  are needed with track {}'.format(args.track))
             sys.exit()
 
-    # load query durations.
-    # this helps to start every duration with 0                
-    logger.warning('getting topic query durations')
-    query_durns = utils.get_topic_query_durations(args.track_topics_file, args.track)
-    for topic, durn in query_durns.iteritems():
-        print >> sys.stderr, topic, float(durn[1] - durn[0])
-    #sys.exit()
-        
-    logger.warning('identify duplicate updates from the pool')
-    # all duplicates have the same relevance judgement.
-    pool, duplicates = utils.read_in_pool_file(args.poolFile)
-    logger.warning(len(pool))
-    logger.warning(len(duplicates))
-        
-    # ignored topics in the pool
-    if args.track == "ts13":
-        duplicates['7'] = {} 
-        duplicates['9911'] = {} 
+        # load query durations.
+        # this helps to start every duration with 0                
+        logger.warning('getting topic query durations')
+        query_durns = utils.get_topic_query_durations(args.track_topics_file, args.track)    
+        for topic, durn in query_durns.iteritems():
+            print >> sys.stderr, topic, float(durn[1] - durn[0])
+        #sys.exit()
+            
+        logger.warning('identify duplicate updates from the pool')
+        # all duplicates have the same relevance judgement.
+        pool, duplicates = utils.read_in_pool_file(args.poolFile)
                     
-    # note relevant updates (and their duplicates)
-    # keep track of nuggets present in each relevant update 
-    logger.warning('reading in matches, tracking duplicates')
-    matches = utils.read_in_matches_track_duplicates(args.matchesFile, duplicates)
+        # ignored topics in the pool
+        if args.track == "ts13":
+            duplicates['7'] = {} 
+            duplicates['9911'] = {} 
+                        
+        # note relevant updates (and their duplicates)
+        # keep track of nuggets present in each relevant update 
+        logger.warning('reading in matches, tracking duplicates')
+        matches = utils.read_in_matches_track_duplicates(args.matchesFile, duplicates)
+        
+        logger.warning('load nuggets and their timestamp and importance')
+        nuggets = utils.read_in_nuggets(args.nuggetsFile, query_durns)    
+        
+        logger.warning('reading in update lengths')
+        updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
     
-    logger.warning('load nuggets and their timestamp and importance')
-    nuggets = utils.read_in_nuggets(args.nuggetsFile, query_durns)    
-       
-    logger.warning('reading in update lengths')
-    updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
-    
+    if 'mb' in args.track:
+        if None in [args.nuggetsFile, args.matchesFile, args.tweetEpochFile]:
+            logger.error('arguments -n -m --tweetEpochFile are needed with track {}'.format(args.track))
+            sys.exit()
+
+        # read in qrels
+        logger.warning('reading in qrels')
+        matches = utils.microblog_read_in_qrels(args.matchesFile)
+
+        logger.warning('set topic query durations')
+        query_durns = utils.microblog_set_topic_query_durations(matches.keys(), args.track)    
+
+        logger.warning('reading in tweet emit times (epoch)')
+        tweet_emit_times = utils.microblog_read_int_tweet_epochs(args.tweetEpochFile)
+                    
+        logger.warning('load clusters and get their earliest timestamp ')
+        nuggets = utils.microblog_read_in_clusters(args.nuggetsFile, query_durns, matches, tweet_emit_times)    
+        
+        logger.warning('reading in update lengths --> Not Applicable for this track')
+        # updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
+
+        args.only_push = True
+        args.push_threshold = 0.0
+
     Apop_mean, Apop_stdev = args.time_away_population_params
     
     MSU = MSUPushRankedOrder(args.num_users,
             args.persistence_population_params,
             Apop_mean, Apop_stdev,
             args.user_latency,
-            args.window_size,
+                args.window_size,
             args.user_persistence,            
             args.user_time_away_mean,
             args.user_reading_mean, 
             args.push_threshold,
             args.only_push)
+
+    MSU.track = args.track
     
     run = {}
     for runfile in args.runfiles:
@@ -241,7 +266,12 @@ if __name__ == '__main__':
         gc.collect()        
         logger.warning('loading runfile ' + runfile )
         try:            
-            run = MSU.load_run_and_attach_gain(runfile, updlens, nuggets, matches, True, args.track, query_durns, pool, args.restrict_runs_to_pool) 
+            run = None
+            if args.track in ['ts13', 'ts14']:
+                run = MSU.load_run_and_attach_gain(runfile, updlens, nuggets, matches, True, args.track, query_durns, pool, args.restrict_runs_to_pool) 
+            elif 'mb' in args.track:
+                run = MSU.microblog_load_run_and_attach_gain(runfile, nuggets, matches, args.track, query_durns)
+            
             logger.warning('run total updates {}'.format(sum([len(v) for v in run.values()])))
             ignored_qid = "7" if args.track == "ts13" else ""
             if ignored_qid in run:
@@ -250,20 +280,27 @@ if __name__ == '__main__':
             logger.error('ERROR: could not load runfile ' + runfile)
             logger.error('EXCEPTION: ' + str(e))
             exit(0)
-
+        
         logger.warning('computing MSU...')
         run_msu, run_pain = MSU.compute_population_MSU(run, query_durns)
         # TODO: keep track of all the nuggets found
         
         printkeys = None
-        if args.track == "ts13":
+        if args.track in ["ts13", "mb15"]:
             keys = filter(lambda x: x.isdigit(), run_msu.keys())
             printkeys = map(str,sorted(map(int, keys))) + ["AVG"]
         elif args.track == 'ts14':
             keys = filter(lambda x: x != 'AVG', run_msu.keys())
             printkeys = sorted(keys) + ['AVG']
         
+        
         for topic in printkeys:
             msu = run_msu[topic]
             pain = run_pain[topic]
-            print '{}\t{}\t{:.3f}\t{:.3f}'.format(os.path.basename(runfile), topic, msu, pain)
+            runname = os.path.basename(runfile)
+            if args.track == 'ts13':
+                runname = os.path.splitext(runname)[1]
+            if args.track == 'mb15':
+                runname = os.path.splitext(runname)[0]
+                
+            print '{}\t{}\t{:.3f}\t{:.3f}'.format(runname, topic, msu, pain)

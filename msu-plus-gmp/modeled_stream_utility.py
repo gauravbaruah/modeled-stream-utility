@@ -8,6 +8,7 @@ import numpy as np
 import bisect 
 from collections import defaultdict
 import array
+import gzip
 
 from update import Update
 from nugget import Nugget
@@ -47,6 +48,7 @@ class ModeledStreamUtility(object):
     def __init__(self, num_users):
         super(ModeledStreamUtility, self).__init__()
         self.num_users = num_users
+        self.track = ""
     
     @staticmethod
     def load_run_and_attach_gain(runfile, updlens, nuggets, matches, useAverageLengths, track, query_durns, pool, restrict_to_pool = False):
@@ -103,6 +105,47 @@ class ModeledStreamUtility(object):
                 if qid not in run:
                     run[qid] = []
                 run[qid].append(updobj)                
+        return run
+
+    @staticmethod
+    def microblog_load_run_and_attach_gain(runfile, nuggets, matches, track, query_durns):
+        run = {}
+        qids_matched = defaultdict(int)
+        qids_ignored = defaultdict(int)
+        with gzip.open(runfile) as rf:
+            for line in rf:                                
+                
+                qid, tweet, epoch, runtag = line.strip().split()
+                qid = qid.replace("MB", "")
+
+                #print qid, tweet, epoch, runtag
+                
+                if qid not in matches:                    
+                    qids_ignored[qid] += 1
+                    continue
+                qids_matched[qid] += 1
+                
+                if qid not in query_durns:
+                    logger.error('qid {} not in query_durns: qid in matches {}'.format(qid, qid in matches))
+
+                epoch = float(epoch) - query_durns[qid][0]
+                                                
+                matching_nuggets = []
+                if tweet in matches[qid]:                    
+                    mc = matches[qid][tweet]                    
+                    if qid in nuggets and mc in nuggets[qid]:
+                        mcgain, mctime = nuggets[qid][mc]                
+                        matching_nuggets.append(Nugget(mc, mcgain, mctime))                
+        
+                updobj = Update(qid, tweet, epoch, 1.0, 140/5.1, len(matching_nuggets), "")
+                updobj.nuggets = matching_nuggets
+
+                if qid not in run:
+                    run[qid] = []
+                run[qid].append(updobj) 
+
+        # print len(qids_matched),qids_matched
+        # print len(qids_ignored),qids_ignored
         return run
 
     @staticmethod
