@@ -58,7 +58,7 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
         fix_away_mean, 
         fix_reading_mean, 
         push_threshold, 
-        only_push):
+        interaction_mode):
 
         super(MSUPushRankedOrder, self).__init__(num_users)
 
@@ -77,7 +77,7 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
         self.fix_reading_mean = fix_reading_mean
         self.fix_away_mean = fix_away_mean        
         self.push_threshold = push_threshold
-        self.only_push = only_push # the user only comes in when notifications are pushed
+        self.interaction_mode = interaction_mode 
         self.user_counter = 0
 
     def normalize_confidences(self):
@@ -136,7 +136,7 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
             #logger.setLevel(logging.DEBUG)
         #logger.warning('user {}'.format(user_instance))
 
-        user_trail = self.generate_user_trail(user_instance, self.update_confidences, self.update_emit_times, self.query_duration, self.push_threshold, self.only_push)
+        user_trail = self.generate_user_trail(user_instance, self.update_confidences, self.update_emit_times, self.query_duration, self.push_threshold, self.interaction_mode)
         # logger.debug('user_trail {}'.format(user_trail))        
         window_starts = array.array('d', map(lambda x: x[0] - self.window_size if x[0] - self.window_size >= 0.0 else 0.0, user_trail))
         if self.window_size == -1:
@@ -172,13 +172,14 @@ if __name__ == '__main__':
     ap.add_argument("-Apop", "--time_away_population_params", nargs=2, type=float, help="population time away mean and stddev", default=[10800.0, 5400.0])
     ap.add_argument("-Ppop", "--persistence_population_params", nargs=2, type=float, help="population RBP persistence mean and stddev", default=[0.2, 0.2])
     ap.add_argument("-w", "--window_size", type=int, default=86400, help="updates older than window_size from current session will not be shown to user (window_size = -1 --> all updates since start of query duration will be shown)")
+    ap.add_argument("interaction_mode", choices=['only.push', 'only.pull', 'push.pull'], default='push.pull')
     ap.add_argument("runfiles", nargs="+")
     ap.add_argument("--user_persistence", type=float)
     ap.add_argument("--user_latency", type=float, default=1.0)
     ap.add_argument("--user_time_away_mean", type=float)
     ap.add_argument("--user_reading_mean", type=float)    
     ap.add_argument("--push_threshold", type=float, default=0.0, help="updates over this threshold are sent as push notifications")
-    ap.add_argument("--only_push", action="store_true", help="the user does not have regular sessions and only comes in via push notifications")
+    
     ap.add_argument("--restrict_runs_to_pool", action="store_true", help="the runs are restricted to their pool contributions")
 
     # NOTE: population reading speed parameters drawn from [Time Well Spent,
@@ -240,8 +241,7 @@ if __name__ == '__main__':
         
         logger.warning('reading in update lengths --> Not Applicable for this track')
         # updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
-
-        args.only_push = True
+        
         args.push_threshold = 0.0
 
     Apop_mean, Apop_stdev = args.time_away_population_params
@@ -255,7 +255,7 @@ if __name__ == '__main__':
             args.user_time_away_mean,
             args.user_reading_mean, 
             args.push_threshold,
-            args.only_push)
+            args.interaction_mode)
 
     MSU.track = args.track
     

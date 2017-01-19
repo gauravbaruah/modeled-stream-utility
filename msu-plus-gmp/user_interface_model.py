@@ -201,18 +201,17 @@ class PushRankedInterfaceMixin(RankedInterfaceMixin):
         # TODO: this is a legacy function. code needs refactoring
         pass
 
-    def generate_user_trail(self, user_instance, update_confs, update_times, query_duration, push_threshold=0.0, only_push=False):
+    def generate_user_trail(self, user_instance, update_confs, update_times, query_duration, push_threshold, interaction_mode):
         """
         generates a trail of user behaviour given system actions (e.g. push notifications)
         push_threshold == 0.0 explicitly pushes each update
         """
-        #return _generate_push_model_user_trail(user_instance.A, user_instance.P, update_confs, update_times, query_duration, push_threshold, only_push)
-        
+                
         sessions = []       
         current_time = 0.0
         ui = 0
         
-        if not only_push:
+        if interaction_mode == 'only.pull' or interaction_mode == 'push.pull' :
             # regular sessions
             while current_time < query_duration:
                 # read one update
@@ -225,13 +224,14 @@ class PushRankedInterfaceMixin(RankedInterfaceMixin):
                 time_away = user_instance.get_next_time_away_duration(current_time, query_duration)
                 current_time += time_away 
 
-        # push notification sessions
-        for ui in xrange(len(update_confs)):
-            if update_confs[ui] >= push_threshold:
-                num_read = 1
-                while np.random.random() < user_instance.P:  
-                    num_read += 1
-                sessions.append((update_times[ui], num_read, 1))
+        if interaction_mode == 'only.push' or interaction_mode =='push.pull':
+            # push notification sessions
+            for ui in xrange(len(update_confs)):
+                if update_confs[ui] >= push_threshold:
+                    num_read = 1
+                    while np.random.random() < user_instance.P:  
+                        num_read += 1
+                    sessions.append((update_times[ui], num_read, 1))
         
         sessions.sort(key=lambda x: x[0])
         return sessions
