@@ -50,7 +50,7 @@ if [ "$mode" == "only.push" ] || [ "$mode" == "only.pull" ]; then
 
 fi
 
-if [ "$mode" == "with_sessions" ]; then
+if [ "$mode" == "push.pull" ]; then
     for A in 3 6 12 24;
     do
         for p in 0.1 0.3 0.5 0.7 0.9;

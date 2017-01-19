@@ -1,5 +1,13 @@
 
-## msu-2016
+## msu-plus
+
+Extensions to MSU:
+
+- adding push notifications + ranked interface to MSU 
+- adding gain vs pain computations to MSU
+
+check out ```run-evaluations.sh``` to get to know the arguments to ```modeled_stream_utility_push-ranked_order.py``` , the main eval script.
+
 
 #### Software dependencies
 1. [python-numpy](http://www.numpy.org/)
