@@ -9,6 +9,7 @@ from collections import defaultdict
 import operator
 import heapq
 import array
+import re
 
 from cython_computations import _compute_push_ranked_user_MSU
 
@@ -161,7 +162,7 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
 if __name__ == '__main__':
 
     ap = argparse.ArgumentParser(description="computes MSU for systems while presenting a ranked order of updates at each user session")
-    ap.add_argument("track", choices=["ts13", "ts14", "mb15"])
+    ap.add_argument("track", choices=["ts13", "ts14", "mb15", "rts16"])
     ap.add_argument("-m", "--matchesFile", help="the qrel file (for tweets) or the matches file (for updates)")
     ap.add_argument("-n", "--nuggetsFile", help="the clusters file (for tweets) or the nuggets file (for updates)")
     ap.add_argument("--poolFile", help="needed for the TS tracks for tracking duplicates and if --restrict_runs_to_pool is active ") 
@@ -221,7 +222,7 @@ if __name__ == '__main__':
         logger.warning('reading in update lengths')
         updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
     
-    if 'mb' in args.track:
+    if args.track in ['mb15', 'rts16']:
         if None in [args.nuggetsFile, args.matchesFile, args.tweetEpochFile]:
             logger.error('arguments -n -m --tweetEpochFile are needed with track {}'.format(args.track))
             sys.exit()
@@ -237,7 +238,7 @@ if __name__ == '__main__':
         tweet_emit_times = utils.microblog_read_int_tweet_epochs(args.tweetEpochFile)
                     
         logger.warning('load clusters and get their earliest timestamp ')
-        nuggets = utils.microblog_read_in_clusters(args.nuggetsFile, query_durns, matches, tweet_emit_times)    
+        nuggets = utils.microblog_read_in_clusters(args.nuggetsFile, query_durns, matches, tweet_emit_times, args.track)    
         
         logger.warning('reading in update lengths --> Not Applicable for this track')
         # updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
@@ -263,13 +264,20 @@ if __name__ == '__main__':
     for runfile in args.runfiles:
         run.clear()
         run = {}
-        gc.collect()        
+        gc.collect()   
+        if args.track == 'rts16' and os.path.splitext(os.path.basename(runfile))[0] in ['iitbhu-15']:
+            logger.warning('ignoring bad run {}. See TREC-RTS-Tracks/2016/scenarioA/eval-scripts/README.txt'.format(runfile))
+            continue
+        if args.track == 'mb15' and  os.path.splitext(os.path.basename(runfile))[0] in ['DALTRECAA1', 'DALTRECMA1', 'DALTRECMA2']:
+            logger.warning('ignoring bad run {}. Run has too many tweets --> bad for analysis'.format(runfile))
+            continue
+
         logger.warning('loading runfile ' + runfile )
         try:            
             run = None
             if args.track in ['ts13', 'ts14']:
                 run = MSU.load_run_and_attach_gain(runfile, updlens, nuggets, matches, True, args.track, query_durns, pool, args.restrict_runs_to_pool) 
-            elif 'mb' in args.track:
+            elif args.track in ['mb15', 'rts16']:
                 run = MSU.microblog_load_run_and_attach_gain(runfile, nuggets, matches, args.track, query_durns)
             
             logger.warning('run total updates {}'.format(sum([len(v) for v in run.values()])))
@@ -287,11 +295,13 @@ if __name__ == '__main__':
         
         printkeys = None
         if args.track in ["ts13", "mb15"]:
+            # print in sorted qid order when topic ids are numeric
             keys = filter(lambda x: x.isdigit(), run_msu.keys())
             printkeys = map(str,sorted(map(int, keys))) + ["AVG"]
-        elif args.track == 'ts14':
-            keys = filter(lambda x: x != 'AVG', run_msu.keys())
-            printkeys = sorted(keys) + ['AVG']
+        elif args.track in ['ts14', 'rts16']:
+            # print in sorted qid order when topic ids are strings
+            keys = filter(lambda x: x != 'AVG' , run_msu.keys())
+            printkeys = sorted(keys, key=lambda x: int(re.findall(r'\d+', x)[0]) ) + ['AVG']
         
         
         for topic in printkeys:
@@ -300,7 +310,7 @@ if __name__ == '__main__':
             runname = os.path.basename(runfile)
             if args.track == 'ts13':
                 runname = os.path.splitext(runname)[1]
-            if args.track == 'mb15':
+            if args.track in ['mb15', 'rts16']:
                 runname = os.path.splitext(runname)[0]
                 
             print '{}\t{}\t{:.3f}\t{:.3f}'.format(runname, topic, msu, pain)

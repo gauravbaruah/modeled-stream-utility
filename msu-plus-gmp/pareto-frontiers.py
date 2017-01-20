@@ -47,7 +47,7 @@ def get_plot_data(gvp_file_name, track, plot_out_path):
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(description='computes and plots pareto frontiers')
     ap.add_argument('--plot_output_folder', help='will produce one plot per gain-vs-pain-input-file in plot_output_folder')
-    ap.add_argument('track', choices=['ts13', 'ts14', 'mb15'])
+    ap.add_argument('track', choices=['ts13', 'ts14', 'mb15', 'rts16'])
     ap.add_argument('gain_vs_pain_input_files', nargs='+')    
     ap.add_argument('--topic', help='produce frontier for given topic', default='AVG')
 

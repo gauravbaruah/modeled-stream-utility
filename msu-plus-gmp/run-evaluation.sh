@@ -3,8 +3,6 @@
 track=$1
 mode=$2
 
-echo "only.push --> time away does not matter"
-
 datafolder="../data/ts-2013"
 poolfile="pooled_updates.tsv"
 topicsfile="topics_masked.xml"
@@ -14,8 +12,19 @@ if [ "$track" == "ts14" ]; then
     topicsfile="trec2014-ts-topics-test.xml"
 fi
 
+qrelfile='qrels.txt'
+clustersfile='clusters-2015.json'
+tweet2dayepochfile='tweet2dayepoch.txt'
+
 if [ "$track" == "mb15" ]; then
     datafolder="../data/mb-2015"
+fi
+
+if [ "$track" == "rts16" ]; then
+    datafolder="../data/rts-2016"
+    qrelfile="rts2016-batch-qrels.txt"
+    clustersfile="rts2016-batch-clusters.json"
+    tweet2dayepochfile="rts2016-batch-tweets2dayepoch.txt"
 fi
 
 outfiles=""
@@ -33,11 +42,11 @@ if [ "$mode" == "only.push" ] || [ "$mode" == "only.pull" ]; then
 
             outfiles="$outfiles under-development/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv"    
 
-        elif  [ "$track" == "mb15" ]; then
+        elif  [ "$track" == "mb15" ] || [ "$track" == "rts16" ] ; then
 
-            echo "python modeled_stream_utility_push-ranked_order.py --matchesFile ${datafolder}/qrels/qrels.txt --nuggetsFile ${datafolder}/qrels/clusters-2015.json --tweetEpochFile ${datafolder}/qrels/tweet2dayepoch.txt -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} mb15 ${mode} ${datafolder}/submitted-runs-scenario-A/* > under-development/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>under-development/${track}.log"
+            echo "python modeled_stream_utility_push-ranked_order.py --matchesFile ${datafolder}/qrels/${qrelfile} --nuggetsFile ${datafolder}/qrels/${clustersfile} --tweetEpochFile ${datafolder}/qrels/${tweet2dayepochfile} -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${track} ${mode} ${datafolder}/submitted-runs-scenario-A/* > under-development/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>under-development/${track}.log"
 
-            time python modeled_stream_utility_push-ranked_order.py --matchesFile ${datafolder}/qrels/qrels.txt --nuggetsFile ${datafolder}/qrels/clusters-2015.json --tweetEpochFile ${datafolder}/qrels/tweet2dayepoch.txt -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} mb15 ${mode} ${datafolder}/submitted-runs-scenario-A/* > under-development/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>under-development/${track}.log
+            time python modeled_stream_utility_push-ranked_order.py --matchesFile ${datafolder}/qrels/${qrelfile} --nuggetsFile ${datafolder}/qrels/${clustersfile} --tweetEpochFile ${datafolder}/qrels/${tweet2dayepochfile} -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${track} ${mode} ${datafolder}/submitted-runs-scenario-A/* > under-development/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>under-development/${track}.log
             
             outfiles="$outfiles under-development/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv"    
 

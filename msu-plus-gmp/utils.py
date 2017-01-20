@@ -156,6 +156,11 @@ def microblog_set_topic_query_durations(topics, track):
         #Evaluation end: Wednesday, July 29, 2015, 23:59:59 UTC
         start = 1437350400.0
         end = 1438214399.0
+    if track == 'rts16':
+        #from August 2, 2016 00:00:00 UTC 
+        #to August 11, 2016 23:59:59 UTC
+        start = 1470096000
+        end = 1470959999
     tqd = dict()
     for qid in topics:
         tqd[qid] = (start, end)
@@ -184,28 +189,48 @@ def microblog_read_int_tweet_epochs(epochFile):
             tweet_emit_times[tweet] = float(epoch)
     return tweet_emit_times
 
-def microblog_read_in_clusters(nuggetsFile, query_durns, matches, tweet_emit_times):
+def microblog_read_in_clusters(nuggetsFile, query_durns, matches, tweet_emit_times, track):
     clusters = {}
-    clid = 0
-    with open(nuggetsFile) as nf:
-        data = json.load(nf)
-        topics = data["topics"]
-        for qid in topics:
-            qid = qid.replace("MB", "")
-            if qid not in clusters:
-                clusters[qid] = {}
-            for cluster in topics["MB"+qid]["clusters"]:
-                clid += 1
-                for tweet in cluster:
-                    tweet_rel = matches[qid][tweet]
-                    tweet_time = tweet_emit_times[tweet] - query_durns[qid][0]
-                    if clid not in clusters[qid]:
-                        clusters[qid][clid] = [tweet_rel, tweet_time]
-                    else:
-                        clusters[qid][clid] = [tweet_rel if tweet_rel > clusters[qid][clid][0] else clusters[qid][clid][0], 
-                                                tweet_time if tweet_time < clusters[qid][clid][1] else clusters[qid][clid][1] ]
-                                        
-                    matches[qid][tweet] = clid
+    if track == 'mb15':
+        clid = 0
+        with open(nuggetsFile) as nf:
+            data = json.load(nf)
+            topics = data["topics"]
+            for qid in topics:
+                qid = qid.replace("MB", "")
+                if qid not in clusters:
+                    clusters[qid] = {}
+                for cluster in topics["MB"+qid]["clusters"]:
+                    clid += 1
+                    for tweet in cluster:
+                        tweet_rel = matches[qid][tweet]
+                        tweet_time = tweet_emit_times[tweet] - query_durns[qid][0]
+                        if tweet_time < 0: tweet_time = 0.0
+                        if clid not in clusters[qid]:
+                            clusters[qid][clid] = [tweet_rel, tweet_time]
+                        else:
+                            clusters[qid][clid] = [tweet_rel if tweet_rel > clusters[qid][clid][0] else clusters[qid][clid][0], 
+                                                    tweet_time if tweet_time < clusters[qid][clid][1] else clusters[qid][clid][1] ]
+                        matches[qid][tweet] = clid
+    if track == 'rts16':
+        with open(nuggetsFile) as nf:
+            data = json.load(nf)
+            topics = data['topics']
+            for qid in topics:
+                if qid not in clusters:
+                    clusters[qid] = {}                
+                for clid in topics[qid]['clusters']:
+                    cluster = topics[qid]['clusters'][clid]
+                    for tweet in cluster:
+                        tweet_rel = matches[qid][tweet]
+                        tweet_time = tweet_emit_times[tweet] - query_durns[qid][0]
+                        if tweet_time < 0: tweet_time = 0.0
+                        if clid not in clusters[qid]:
+                            clusters[qid][clid] = [tweet_rel, tweet_time]
+                        else:
+                            clusters[qid][clid] = [tweet_rel if tweet_rel > clusters[qid][clid][0] else clusters[qid][clid][0], 
+                                                    tweet_time if tweet_time < clusters[qid][clid][1] else clusters[qid][clid][1] ]
+                        matches[qid][tweet] = clid
     return clusters
                 
 
