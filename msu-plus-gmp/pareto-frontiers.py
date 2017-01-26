@@ -24,6 +24,31 @@ def plot_graph(points, colorcodes, title_text, frontier):
         plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=10, verticalalignment='top')
     return fig
 
+def plot_multiple_pareto_frontiers(multi_fronts, colorcodes):
+    fig = plt.figure()
+
+    plt.ylabel('gain')
+    plt.xlabel('pain')
+    
+    track = multi_fronts[0][1][:multi_fronts[0][1].index(': ')]
+    
+    plt.title( track + ": " + 'Pareto frontiers')
+
+    multi_fronts.sort(key=lambda x: int(x[1].split(';')[1].split('.')[2]))
+    
+    for frontier, paramstring in multi_fronts:
+        fX, fY, fnames = zip(*frontier)
+        paramstring = paramstring.replace(track +': ', '')
+        p, A, L, V = paramstring.split(';')
+        A = 'A=' + A.split('.')[-1]
+        plt.plot(fX, fY, marker='o', label='; '.join([p,A]) )
+        #plt.plot(fX, fY, colorcodes)
+        for i, fname in enumerate(fnames):        
+            plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=8, verticalalignment='top')        
+    plt.legend(loc='lower right')
+    return fig
+
+
 def get_pareto_frontier(points):
     # http://math.stackexchange.com/questions/101125/how-to-compute-the-pareto-frontier-intuitively-speaking/101141
     
@@ -50,10 +75,13 @@ if __name__ == '__main__':
     ap.add_argument('track', choices=['ts13', 'ts14', 'mb15', 'rts16'])
     ap.add_argument('gain_vs_pain_input_files', nargs='+')    
     ap.add_argument('--topic', help='produce frontier for given topic', default='AVG')
+    ap.add_argument('--multiple_pareto_fronts', help="output filename for plot with multiple pareto frontiers for various parameter settings")
 
     args = ap.parse_args()
 
     frontier_fractions = {}
+
+    multi_fronts = []
 
     for gvp_file in args.gain_vs_pain_input_files:
 
@@ -78,15 +106,24 @@ if __name__ == '__main__':
                     frontier_fractions[run][2] += p
                     frontier_fractions[run][3] += 1
 
+            plot_title, plot_output_file = get_plot_data(gvp_file, args.track, args.plot_output_folder)
+
+            if args.multiple_pareto_fronts:
+                multi_fronts.append( (frontier, plot_title) ) # the frontier and the param settings in the plot_title
             
-            if args.plot_output_folder:
-                plot_title, plot_output_file = get_plot_data(gvp_file, args.track, args.plot_output_folder)
+            if args.plot_output_folder:                
                 
                 gvp_plot = plot_graph(gain_pain_points, 'go', plot_title, frontier)
 
                 pp = PdfPages(plot_output_file)
                 pp.savefig(gvp_plot)
                 pp.close()
+
+    if args.multiple_pareto_fronts:
+        multi_front_plot = plot_multiple_pareto_frontiers(multi_fronts, 'go')
+        pp = PdfPages(os.path.join(args.plot_output_folder, args.multiple_pareto_fronts))
+        pp.savefig(multi_front_plot)
+        pp.close()
 
     num_param_sets = float(len(args.gain_vs_pain_input_files))
     front_avg = dict(map(lambda x: (x[0], [x[1][0]/num_param_sets, x[1][1]/x[1][3], x[1][2]/x[1][3]]), frontier_fractions.items()))

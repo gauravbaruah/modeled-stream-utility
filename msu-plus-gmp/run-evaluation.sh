@@ -60,7 +60,7 @@ if [ "$mode" == "only.push" ] ; then
         runeval $p $away
     done
 
-    python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder under-development/${track}/ > under-development/${track}/${mode}.fronfrac.tsv
+    python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder under-development/${track}/  > under-development/${track}/${mode}.fronfrac.tsv
     pdftk ${outfiles//tsv/pdf} cat output under-development/${track}/${mode}_plots.pdf
 
 fi
@@ -76,7 +76,7 @@ if [ "$mode" == "only.pull" ]; then
             runeval $p $away
         done
 
-        python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder under-development/${track}/ > under-development/${track}/${mode}.P-${p}.fronfrac.tsv
+        python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder under-development/${track}/ --multiple_pareto_fronts ${mode}.P-${p}_multi-pareto.pdf > under-development/${track}/${mode}.P-${p}.fronfrac.tsv
         pdftk ${outfiles//tsv/pdf} cat output under-development/${track}/${mode}.P-${p}_plots.pdf
 
     done

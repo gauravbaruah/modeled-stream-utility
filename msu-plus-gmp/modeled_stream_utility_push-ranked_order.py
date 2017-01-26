@@ -309,7 +309,7 @@ if __name__ == '__main__':
             pain = run_pain[topic]
             runname = os.path.basename(runfile)
             if args.track == 'ts13':
-                runname = os.path.splitext(runname)[1]
+                runname = runname.replace("input.", '')
             if args.track in ['mb15', 'rts16']:
                 runname = os.path.splitext(runname)[0]
                 
