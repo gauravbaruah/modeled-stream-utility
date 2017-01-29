@@ -215,6 +215,11 @@ if __name__ == '__main__':
         # keep track of nuggets present in each relevant update 
         logger.warning('reading in matches, tracking duplicates')
         matches = utils.read_in_matches_track_duplicates(args.matchesFile, duplicates)
+
+        if args.track == 'ts13':
+            matches.pop('11', None)
+            matches.pop('9911', None)
+            matches.pop('7', None)
         
         logger.warning('load nuggets and their timestamp and importance')
         nuggets = utils.read_in_nuggets(args.nuggetsFile, query_durns)    
@@ -245,6 +250,8 @@ if __name__ == '__main__':
         
         args.push_threshold = 0.0
 
+    logger.warning('track {}. number of keys {}'.format(args.track, len(matches.keys())))
+
     Apop_mean, Apop_stdev = args.time_away_population_params
     
     MSU = MSUPushRankedOrder(args.num_users,
@@ -259,6 +266,7 @@ if __name__ == '__main__':
             args.interaction_mode)
 
     MSU.track = args.track
+    
     
     run = {}
     for runfile in args.runfiles:
@@ -289,8 +297,8 @@ if __name__ == '__main__':
             logger.error('EXCEPTION: ' + str(e))
             exit(0)
         
-        logger.warning('computing MSU...')
-        run_msu, run_pain = MSU.compute_population_MSU(run, query_durns)
+        logger.warning('computing MSU... for {} topics'.format(len(matches.keys())))
+        run_msu, run_pain = MSU.compute_population_MSU(run, query_durns, len(matches.keys()))
         # TODO: keep track of all the nuggets found
         
         printkeys = None

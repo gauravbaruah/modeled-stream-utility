@@ -221,7 +221,7 @@ class ModeledStreamUtility(object):
         """
         raise NotImplementedError
 
-    def compute_population_MSU(self, run, query_durns):
+    def compute_population_MSU(self, run, query_durns, num_topics):
         """
         computes MSU for each user in specified population and returns the
         average MSU of the population for a given system (for all topics)
@@ -236,9 +236,8 @@ class ModeledStreamUtility(object):
         gc.collect()
         
         # intermediate MSUs for users and topics
-        msu_user_topic = np.zeros( (self.num_users, len(run.keys())),
-            dtype=float)
-        pain_user_topic = np.zeros( (self.num_users, len(run.keys())), dtype=float)
+        msu_user_topic = np.zeros( (self.num_users, num_topics), dtype=float)
+        pain_user_topic = np.zeros( (self.num_users, num_topics), dtype=float)
         tpc_idx = dict( [ (t, i) for i, t in enumerate(sorted(run.keys())) ] )
 
         # for each topic

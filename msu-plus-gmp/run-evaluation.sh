@@ -27,7 +27,13 @@ if [ "$track" == "rts16" ]; then
     tweet2dayepochfile="rts2016-batch-tweets2dayepoch.txt"
 fi
 
+
+# cython init
+python setup.py build_ext --inplace
+
+
 outfiles=""
+
 
 function runeval {
     p=$1

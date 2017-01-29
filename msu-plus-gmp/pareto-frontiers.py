@@ -111,7 +111,7 @@ if __name__ == '__main__':
             if args.multiple_pareto_fronts:
                 multi_fronts.append( (frontier, plot_title) ) # the frontier and the param settings in the plot_title
             
-            if args.plot_output_folder:                
+            if args.plot_output_folder and not args.multiple_pareto_fronts:                
                 
                 gvp_plot = plot_graph(gain_pain_points, 'go', plot_title, frontier)
 
