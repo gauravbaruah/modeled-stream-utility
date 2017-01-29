@@ -80,6 +80,7 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
         self.push_threshold = push_threshold
         self.interaction_mode = interaction_mode 
         self.user_counter = 0
+        self.ignore_verbosity = False
 
     def normalize_confidences(self):
         #logger.warning(self.update_confidences)
@@ -152,7 +153,7 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
         
         user_topic_msu, user_topic_pain = _compute_push_ranked_user_MSU(user_trail, window_starts, ssn_starts, 
             self.update_emit_times, self.update_confidences, self.update_lengths, updates,
-            user_instance.V, user_instance.L, self.query_duration)
+            user_instance.V, user_instance.L, self.query_duration, self.ignore_verbosity)
         # logger.debug(' user {} done'.format(self.user_counter))
         
         return user_topic_msu, user_topic_pain
@@ -182,6 +183,7 @@ if __name__ == '__main__':
     ap.add_argument("--push_threshold", type=float, default=0.0, help="updates over this threshold are sent as push notifications")
     
     ap.add_argument("--restrict_runs_to_pool", action="store_true", help="the runs are restricted to their pool contributions")
+    ap.add_argument("--ignore_verbosity", action="store_true", help="ignore verbosity computations i.e. user reading speed does not affect reading of updates", default=False)
 
     # NOTE: population reading speed parameters drawn from [Time Well Spent,
     # Clarke and Smucker, 2014]
@@ -266,7 +268,7 @@ if __name__ == '__main__':
             args.interaction_mode)
 
     MSU.track = args.track
-    
+    MSU.ignore_verbosity = args.ignore_verbosity
     
     run = {}
     for runfile in args.runfiles:

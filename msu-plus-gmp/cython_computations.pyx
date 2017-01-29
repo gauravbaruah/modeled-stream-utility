@@ -206,7 +206,8 @@ cdef tuple process_session(updates_read, already_seen_ngts, updates,
                 double ssn_start, int ssn_reads, int uti,
                 double next_ssn_start, double next_ssn_window_start,
                 ssn_starts, # needed for alpha computation
-                UpdateHeap topkqueue):
+                UpdateHeap topkqueue,
+                ignore_verbosity = False):
     
     cdef double session_msu = 0.0
     cdef double session_pain = 0.0
@@ -244,7 +245,7 @@ cdef tuple process_session(updates_read, already_seen_ngts, updates,
         upd_time_to_read = (float(read_update_wlen) / user_reading_speed)
         current_time += upd_time_to_read
 
-        if current_time > next_ssn_start:
+        if current_time > next_ssn_start and not ignore_verbosity:
             # user persisted in reading upto the start of the next session
             # logger.debug('user persisted in reading upto the start of the next session')
             
@@ -468,7 +469,8 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
 def _compute_push_ranked_user_MSU(user_trail, window_starts, ssn_starts, 
             update_times, update_confidences, update_lengths, updates,
             double user_reading_speed, double user_latency_tolerance,
-            double query_duration):
+            double query_duration,
+            bint ignore_verbosity):
     
     # if user_index == 23:
     #     logger.setLevel(logging.DEBUG)
@@ -530,7 +532,8 @@ def _compute_push_ranked_user_MSU(user_trail, window_starts, ssn_starts,
                                                     ssn_start, ssn_reads, uti,
                                                     next_ssn_start, next_ssn_window_start,
                                                     ssn_starts,
-                                                    topkqueue)
+                                                    topkqueue,
+                                                    ignore_verbosity)
             user_topic_msu += session_msu
             user_topic_pain += session_pain
             uti += 1
@@ -557,7 +560,8 @@ def _compute_push_ranked_user_MSU(user_trail, window_starts, ssn_starts,
                                                 ssn_start, ssn_reads, uti,
                                                 next_ssn_start, next_ssn_window_start,
                                                 ssn_starts,
-                                                topkqueue)
+                                                topkqueue,
+                                                ignore_verbosity)
         user_topic_msu += session_msu
         user_topic_pain += session_pain
         if len(updates_read) == num_updates:
