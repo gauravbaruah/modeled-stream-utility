@@ -248,7 +248,7 @@ cdef tuple process_session(updates_read, already_seen_ngts, updates,
         if current_time > next_ssn_start and not ignore_verbosity:
             # user persisted in reading upto the start of the next session
             # logger.debug('user persisted in reading upto the start of the next session')
-            
+            #print 'not ignoring verbosity'
             break
         
         updates_read[upddata.index] = True
