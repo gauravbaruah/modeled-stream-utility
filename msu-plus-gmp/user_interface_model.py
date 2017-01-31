@@ -228,7 +228,7 @@ class PushRankedInterfaceMixin(RankedInterfaceMixin):
             # push notification sessions
             for ui in xrange(len(update_confs)):
                 if update_confs[ui] >= push_threshold:
-                    num_read = 1
+                    num_read = 0
                     while np.random.random() < user_instance.P:  
                         num_read += 1
                     sessions.append((update_times[ui], num_read, 1))
