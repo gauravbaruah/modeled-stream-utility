@@ -1,0 +1,8 @@
+--ignore_verbosity --restrict_runs_to_pool --push_threshold 0.7
+--ignore_verbosity --restrict_runs_to_pool
+--ignore_verbosity --push_threshold 0.7
+--ignore_verbosity
+--restrict_runs_to_pool --push_threshold 0.7
+--restrict_runs_to_pool
+--push_threshold 0.7
+
