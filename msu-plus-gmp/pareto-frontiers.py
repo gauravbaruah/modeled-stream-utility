@@ -11,6 +11,8 @@ def plot_graph(points, colorcodes, title_text, frontier):
     fig = plt.figure()
     #ax = fig.add_subplot(111)
 
+    #plt.tight_layout()
+
     plot_x, plot_y, rnames = zip(*points)
 
     plt.plot(plot_x, plot_y, colorcodes)
@@ -22,10 +24,12 @@ def plot_graph(points, colorcodes, title_text, frontier):
     plt.plot(fX, fY)
     for i, fname in enumerate(fnames):
         plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=10, verticalalignment='top')
+    plt.tight_layout()
     return fig
 
 def plot_multiple_pareto_frontiers(multi_fronts, colorcodes):
     fig = plt.figure()
+    
 
     plt.ylabel('gain')
     plt.xlabel('pain')
@@ -46,6 +50,7 @@ def plot_multiple_pareto_frontiers(multi_fronts, colorcodes):
         for i, fname in enumerate(fnames):
             plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=8, verticalalignment='top')
     plt.legend(loc='lower right')
+    plt.tight_layout()
     return fig
 
 def make_paper_plots(multi_fronts, mode):
@@ -88,6 +93,7 @@ def make_paper_plots(multi_fronts, mode):
             plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=8, verticalalignment='top', color=colors[ lsi%3 if mode == 'only.push' else lsi/3 ])
         lsi += 1
     plt.legend(loc='lower right')
+    plt.tight_layout()
     return fig
 
 def get_pareto_frontier(points):
@@ -172,7 +178,10 @@ if __name__ == '__main__':
             if args.multiple_pareto_fronts:
                 multi_fronts.append( (frontier, plot_title) ) # the frontier and the param settings in the plot_title
 
-            if args.plot_output_folder and not args.multiple_pareto_fronts:
+            if args.plot_output_folder and not args.multiple_pareto_fronts:               
+                
+                if 'only.push' in plot_title:
+                    plot_title = plot_title.replace('.21600', '')                           
 
                 gvp_plot = plot_graph(gain_pain_points, 'go', plot_title, frontier)
 
