@@ -21,9 +21,13 @@ function makeplots {
 }
 
 for track in ts13 ts14 mb15 rts16; do
-    for mode in only.push only.pull push.pull; do
-        makeplots $directory $track $mode;
-    done
+    # we only have the only.push mode for SIGIR2017 short submission
+    #for mode in only.push only.pull push.pull; do
+    #    makeplots $directory $track $mode;
+    #done
+    
+    makeplots $directory $track only.push
+
 done
 
 pdftk `find ${directory} -name "*pdf" -print0 | xargs -0 echo` cat output ${directory}.pdf

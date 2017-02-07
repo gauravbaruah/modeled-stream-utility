@@ -92,6 +92,12 @@ def make_paper_plots(multi_fronts, mode):
         for i, fname in enumerate(fnames):
             plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=8, verticalalignment='top', color=colors[ lsi%3 if mode == 'only.push' else lsi/3 ])
         lsi += 1
+    
+    xmin, xmax = plt.xlim()
+    if xmax > 250:
+        plt.xlim( 0, 250 )
+    #plt.ylim( 0, 25 )
+
     plt.legend(loc='lower right')
     plt.tight_layout()
     return fig
