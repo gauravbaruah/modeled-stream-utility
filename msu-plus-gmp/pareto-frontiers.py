@@ -74,7 +74,13 @@ def make_paper_plots(multi_fronts, mode):
     lsi = 0
     for frontier, paramstring in multi_fronts:
 
+        print paramstring
+        print len(frontier)
+
+                
         fX, fY, fnames = zip(*frontier)
+        print fnames
+
         paramstring = paramstring.replace(track +': ', '')
         p, A, L, V = paramstring.split(';')
         A = 'A=' + A.split('.')[-1]
@@ -91,12 +97,17 @@ def make_paper_plots(multi_fronts, mode):
 
         for i, fname in enumerate(fnames):
             plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=8, verticalalignment='top', color=colors[ lsi%3 if mode == 'only.push' else lsi/3 ])
+            print '{:.3f}\t{:.3f}\t{}\t{}'.format(fY[i], fX[i], fY[i] >= fX[i], fname)
         lsi += 1
     
     xmin, xmax = plt.xlim()
     if xmax > 250:
         plt.xlim( 0, 250 )
     #plt.ylim( 0, 25 )
+
+    ymin, ymax = plt.ylim()
+
+    plt.plot([0, ymax-1e-8], [0, ymax], c='blue', ls='dotted')
 
     plt.legend(loc='lower right')
     plt.tight_layout()
@@ -171,6 +182,7 @@ if __name__ == '__main__':
 
             frontier = get_pareto_frontier(gain_pain_points)
             for p, g, run in frontier:
+                print p, g, run
                 if run not in frontier_fractions:
                     frontier_fractions[run] = [1, g, p, 1]
                 else:
