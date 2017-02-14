@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 from collections import defaultdict
 
+from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, inset_axes
+from mpl_toolkits.axes_grid1.inset_locator import mark_inset
+
+import numpy as np
+
 def plot_graph(points, colorcodes, title_text, frontier):
     fig = plt.figure()
     #ax = fig.add_subplot(111)
@@ -53,6 +58,64 @@ def plot_multiple_pareto_frontiers(multi_fronts, colorcodes):
     plt.tight_layout()
     return fig
 
+
+def draw_inset_plot(ax, inset_frontier, mode, track):
+    zoom = 2
+    if track == 'TS14':
+        zoom = 1.25
+    elif track == 'TS13':
+        zoom = 1.75
+    elif track == 'MB15':
+        zoom = 3
+
+
+    ax_inset = zoomed_inset_axes(ax, zoom, loc=7)
+
+    frontier, paramstring = inset_frontier
+            
+    fX, fY, fnames = zip(*frontier)
+
+    paramstring = paramstring.replace(track +': ', '')
+    p, A, L, V = paramstring.split(';')
+    A = 'A=' + A.split('.')[-1]
+    legendlabel = '; '.join([p,A])
+
+    if mode == 'only.push':
+        legendlabel = p
+
+    ax_inset.plot(fX, fY, marker='o', linestyle='solid', color='orange', label= legendlabel)
+
+    for i, fname in enumerate(fnames):
+        ax_inset.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=10, verticalalignment='top', color='orange')
+    
+    x1, x2, y1, y2 = 0, 0, 0, 0
+    xstep, ystep = 0,0
+    if track == 'RTS16':
+        x1, x2, y1, y2 = 0, 3, 0, .4
+        xstep = 1
+        ystep = 0.1
+    elif track == 'MB15':
+        x1, x2, y1, y2 = 0, 6, 0, 1.6
+        xstep = 1
+        ystep = 0.5
+    elif track == 'TS14':
+        x1, x2, y1, y2 = 0, 60, 0, 15
+        xstep = 10
+        ystep = 5
+    elif track == 'TS13':
+        x1, x2, y1, y2 = 0, 25, 0, 11
+        xstep = 5
+        ystep = 2
+    
+    print  track, x1, x2, y1, y2 
+
+    ax_inset.set_xlim(x1, x2)
+    ax_inset.set_ylim(y1, y2)
+    ax_inset.set_xticks(np.arange(x1, x2+.1, xstep))
+    ax_inset.set_yticks(np.arange(y1, y2+.1, ystep))
+    ax_inset.plot([0, y2], [0, y2], c='blue', ls='dotted')
+
+
 def make_paper_plots(multi_fronts, mode):
 
     fig = plt.figure()
@@ -74,12 +137,12 @@ def make_paper_plots(multi_fronts, mode):
     lsi = 0
     for frontier, paramstring in multi_fronts:
 
-        print paramstring
-        print len(frontier)
+        # print paramstring
+        # print len(frontier)
 
                 
         fX, fY, fnames = zip(*frontier)
-        print fnames
+        # print fnames
 
         paramstring = paramstring.replace(track +': ', '')
         p, A, L, V = paramstring.split(';')
@@ -96,8 +159,8 @@ def make_paper_plots(multi_fronts, mode):
         plt.plot(fX, fY, marker='o', linestyle=linestyles[lsi%3], color=colors[ lsi%3 if mode == 'only.push' else lsi/3 ], label= legendlabel)
 
         for i, fname in enumerate(fnames):
-            plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=8, verticalalignment='top', color=colors[ lsi%3 if mode == 'only.push' else lsi/3 ])
-            print '{:.3f}\t{:.3f}\t{}\t{}'.format(fY[i], fX[i], fY[i] >= fX[i], fname)
+            plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=10, verticalalignment='top', color=colors[ lsi%3 if mode == 'only.push' else lsi/3 ])
+            # print '{:.3f}\t{:.3f}\t{}\t{}'.format(fY[i], fX[i], fY[i] >= fX[i], fname)
         lsi += 1
     
     xmin, xmax = plt.xlim()
@@ -108,9 +171,19 @@ def make_paper_plots(multi_fronts, mode):
     ymin, ymax = plt.ylim()
 
     plt.plot([0, ymax-1e-8], [0, ymax], c='blue', ls='dotted')
+    
+    plt.legend(loc='upper left')
 
-    plt.legend(loc='lower right')
+    
+
+    ax = plt.gca()
+    
+    # ax_inset = inset_axes(ax, width='30%', height='30%', loc=4)
+    draw_inset_plot(ax, multi_fronts[0], mode, track)
+   
+        
     plt.tight_layout()
+    
     return fig
 
 def get_pareto_frontier(points):
