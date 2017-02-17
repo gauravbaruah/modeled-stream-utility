@@ -69,7 +69,9 @@ def draw_inset_plot(ax, inset_frontier, mode, track):
         zoom = 3
 
 
-    ax_inset = zoomed_inset_axes(ax, zoom, loc=7)
+    # ax_inset = zoomed_inset_axes(ax, zoom, loc=7)
+    ax_inset = inset_axes(ax, width=1.95, height=1.95, loc=4, borderpad=1.5)
+
 
     frontier, paramstring = inset_frontier
             
@@ -168,7 +170,9 @@ def make_paper_plots(multi_fronts, mode):
     xmin, xmax = plt.xlim()
     if xmax > 250:
         plt.xlim( 0, 250 )
-    #plt.ylim( 0, 25 )
+
+    if track == 'TS14':
+       plt.ylim( 0, 25 )
 
     ymin, ymax = plt.ylim()
 
