@@ -58,7 +58,7 @@ function runeval {
 
         echo "python modeled_stream_utility_push-ranked_order.py -n ${datafolder}/qrels/nuggets.tsv -m ${datafolder}/qrels/matches.tsv --poolFile ${datafolder}/qrels/${poolfile} -t ${datafolder}/qrels/${topicsfile} -l ${datafolder}/update-lengths/ -u 1   ${extra_args} --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${track} ${mode} ${datafolder}/submitted-runs/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv"
 
-        time  python modeled_stream_utility_push-ranked_order.py -n ${datafolder}/qrels/nuggets.tsv -m ${datafolder}/qrels/matches.tsv --poolFile ${datafolder}/qrels/${poolfile} -t ${datafolder}/qrels/${topicsfile} -l ${datafolder}/update-lengths/ -u 1  ${extra_args} --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${track} ${mode} ${datafolder}/submitted-runs/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log
+        time python modeled_stream_utility_push-ranked_order.py -n ${datafolder}/qrels/nuggets.tsv -m ${datafolder}/qrels/matches.tsv --poolFile ${datafolder}/qrels/${poolfile} -t ${datafolder}/qrels/${topicsfile} -l ${datafolder}/update-lengths/ -u 1  ${extra_args} --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${track} ${mode} ${datafolder}/submitted-runs/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log
 
         outfiles="$outfiles ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv"    
 
@@ -80,6 +80,7 @@ if [ "$mode" == "only.push" ] ; then
     do
         away=$((6*60*60))
         runeval $p $away
+        break
     done
 
     #python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder ${outdir}/${track}/  > ${outdir}/${track}/${mode}.fronfrac.tsv

@@ -116,7 +116,9 @@ class ModeledStreamUtility(object):
             for line in rf:                                
                 
                 qid, tweet, epoch, runtag = line.strip().split()
-                qid = qid.replace("MB", "")
+                
+                if track == 'mb15':
+                    qid = qid.replace("MB", "")
 
                 #print qid, tweet, epoch, runtag
                 

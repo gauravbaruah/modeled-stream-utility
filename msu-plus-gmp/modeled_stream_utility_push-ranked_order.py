@@ -253,7 +253,8 @@ if __name__ == '__main__':
         args.push_threshold = 0.0
 
     logger.warning('track {}. number of keys {}'.format(args.track, len(matches.keys())))
-
+    #logger.warning('track {}. number of nuggets for topics \n{}'.format(args.track, '\n'.join(['{}\t{}'.format(qid, len(nuggets)) for qid, nuggets in nuggets.items()])))
+    
     Apop_mean, Apop_stdev = args.time_away_population_params
     
     MSU = MSUPushRankedOrder(args.num_users,
@@ -290,7 +291,7 @@ if __name__ == '__main__':
             elif args.track in ['mb15', 'rts16']:
                 run = MSU.microblog_load_run_and_attach_gain(runfile, nuggets, matches, args.track, query_durns)
             
-            logger.warning('run total updates {}'.format(sum([len(v) for v in run.values()])))
+            logger.warning('run total updates {} in {} topics'.format(sum([len(v) for v in run.values()]), len(run)))
             ignored_qid = "7" if args.track == "ts13" else ""
             if ignored_qid in run:
                 run.pop(ignored_qid)
@@ -298,7 +299,8 @@ if __name__ == '__main__':
             logger.error('ERROR: could not load runfile ' + runfile)
             logger.error('EXCEPTION: ' + str(e))
             exit(0)
-        
+
+               
         logger.warning('computing MSU... for {} topics'.format(len(matches.keys())))
         run_msu, run_pain = MSU.compute_population_MSU(run, query_durns, len(matches.keys()))
         # TODO: keep track of all the nuggets found

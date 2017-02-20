@@ -3,30 +3,32 @@
 
 directory="results/no.verb_unrestricted.runs_push.above-0.7"
 
+debug=
+
 function makeplots {
     directory=$1
     track=$2
     mode=$3
     
     if [ "$mode" == "only.push" ]; then
-        python pareto-frontiers.py ${track} --plot_output_folder ${directory}/${track} --paper_plots --mode ${mode} --multiple_pareto_fronts ${mode}-multi.front.pdf ${directory}/${track}/p-0.[159]_A-${mode}.*tsv
+        $debug python pareto-frontiers.py ${track} --plot_output_folder ${directory}/${track} --paper_plots --mode ${mode} --multiple_pareto_fronts ${mode}-multi.front.pdf ${directory}/${track}/norm_p-0.[159]_A-${mode}.*tsv
 
-        python pareto-frontiers.py ${track} --plot_output_folder results/  ${directory}/${track}/p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.tsv
-        mv results/p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.pdf results/${track}-p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.pdf
+        $debug python pareto-frontiers.py ${track} --plot_output_folder results/  ${directory}/${track}/norm_p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.tsv
+        $debug mv results/norm_p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.pdf results/${track}-p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.pdf
 
     else
-        python pareto-frontiers.py ${track} --plot_output_folder ${directory}/${track} --paper_plots --mode ${mode} --multiple_pareto_fronts ${mode}-multi.front.pdf ${directory}/${track}/p-0.[159]_A-${mode}.{300,3600,21600}_*tsv
+        $debug python pareto-frontiers.py ${track} --plot_output_folder ${directory}/${track} --paper_plots --mode ${mode} --multiple_pareto_fronts ${mode}-multi.front.pdf ${directory}/${track}/p-0.[159]_A-${mode}.{300,3600,21600}_*tsv
     fi
     
 }
 
-for track in ts13 ts14 mb15 rts16; do
+for track in ts13 ts14 mb15 ; do
 #for track in rts16; do
     # we only have the only.push mode for SIGIR2017 short submission
     #for mode in only.push only.pull push.pull; do
     #    makeplots $directory $track $mode;
     #done
-    
+  
     makeplots $directory $track only.push
 
 done

@@ -97,13 +97,13 @@ def draw_inset_plot(ax, inset_frontier, mode, track):
         xstep = 1
         ystep = 0.1
     elif track == 'MB15':
-        x1, x2, y1, y2 = 0, 6, 0, 1.6
-        xstep = 1
-        ystep = 0.5
+        x1, x2, y1, y2 = 0, 8, 0, .05   
+        xstep = 2
+        ystep = 0.05
     elif track == 'TS14':
-        x1, x2, y1, y2 = 0, 60, 0, 15
+        x1, x2, y1, y2 = 0, 60, 0, .25
         xstep = 10
-        ystep = 5
+        ystep = .05
     elif track == 'TS13':
         x1, x2, y1, y2 = 0, 25, 0, 11
         xstep = 5
@@ -172,7 +172,7 @@ def make_paper_plots(multi_fronts, mode):
         plt.xlim( 0, 250 )
 
     if track == 'TS14':
-       plt.ylim( 0, 25 )
+       plt.ylim( 0, .5 )
 
     ymin, ymax = plt.ylim()
 
@@ -205,6 +205,9 @@ def get_pareto_frontier(points):
 def get_plot_data(gvp_file_name, track, plot_out_path):
     param_str = os.path.splitext(os.path.basename(gvp_file_name))[0]
     plot_file_name = os.path.join(plot_out_path, param_str + '.pdf')
+
+    param_str = param_str.replace("norm_","")
+
     param_str = param_str.replace('_gmp', '')
     param_str = param_str.replace('_', '; ')
     param_str = param_str.replace('-', '=')
@@ -254,10 +257,12 @@ if __name__ == '__main__':
 
             gain_pain_points = []
             for line in tpclines:
-                r, t, g, p = line.strip().split('\t')
+                r, t, g, p, old_gain, old_pain = line.strip().split('\t')
                 gain_pain_points.append( (float(p), float(g),  r) )
 
             gain_pain_points.sort()
+
+            print gain_pain_points
 
             frontier = get_pareto_frontier(gain_pain_points)
             for p, g, run in frontier:
@@ -273,6 +278,7 @@ if __name__ == '__main__':
             plot_title, plot_output_file = get_plot_data(gvp_file, args.track, args.plot_output_folder)
 
             if args.multiple_pareto_fronts:
+                print plot_title
                 multi_fronts.append( (frontier, plot_title) ) # the frontier and the param settings in the plot_title
 
             if args.plot_output_folder and not args.multiple_pareto_fronts:               
