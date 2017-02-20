@@ -79,8 +79,7 @@ if [ "$mode" == "only.push" ] ; then
     for p in 0.1 0.3 0.5 0.7 0.9;
     do
         away=$((6*60*60))
-        runeval $p $away
-        break
+        runeval $p $away        
     done
 
     #python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder ${outdir}/${track}/  > ${outdir}/${track}/${mode}.fronfrac.tsv

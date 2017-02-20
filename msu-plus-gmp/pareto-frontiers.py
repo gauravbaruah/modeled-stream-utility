@@ -93,13 +93,13 @@ def draw_inset_plot(ax, inset_frontier, mode, track):
     x1, x2, y1, y2 = 0, 0, 0, 0
     xstep, ystep = 0,0
     if track == 'RTS16':
-        x1, x2, y1, y2 = 0, 3, 0, .4
+        x1, x2, y1, y2 = 0, 3, 0, .05
         xstep = 1
         ystep = 0.1
     elif track == 'MB15':
         x1, x2, y1, y2 = 0, 8, 0, .05   
         xstep = 2
-        ystep = 0.05
+        ystep = 0.1
     elif track == 'TS14':
         x1, x2, y1, y2 = 0, 60, 0, .25
         xstep = 10
@@ -114,8 +114,9 @@ def draw_inset_plot(ax, inset_frontier, mode, track):
     ax_inset.set_xlim(x1, x2)
     ax_inset.set_ylim(y1, y2)
     ax_inset.set_xticks(np.arange(x1, x2+.1, xstep))
-    ax_inset.set_yticks(np.arange(y1, y2+.1, ystep))
-    ax_inset.plot([0, y2], [0, y2], c='blue', ls='dotted')
+    #ax_inset.set_yticks(np.arange(y1, y2+.1, ystep))
+    
+    #ax_inset.plot([0, y2], [0, y2], c='blue', ls='dotted')
 
 
 def make_paper_plots(multi_fronts, mode):
@@ -176,7 +177,7 @@ def make_paper_plots(multi_fronts, mode):
 
     ymin, ymax = plt.ylim()
 
-    plt.plot([0, ymax-1e-8], [0, ymax], c='blue', ls='dotted')
+    # plt.plot([0, ymax-1e-8], [0, ymax], c='blue', ls='dotted')
     
     plt.legend(loc='upper left')
 

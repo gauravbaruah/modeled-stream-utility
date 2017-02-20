@@ -1,5 +1,5 @@
 import argparse
-import numpy as np
+import sys
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description='find all unique relevant items returned by runs')
@@ -15,7 +15,7 @@ if __name__ == "__main__":
         lines = [ line.strip().split('\t') for line in ff.readlines() ]
         findables = dict( [ (qid, int(count)) for qid, count in lines] )
 
-    #print findables
+    print >> sys.stderr, findables
 
     with open(args.eval_results_file) as ef:
         average_norm_gain = 0.0
@@ -27,10 +27,9 @@ if __name__ == "__main__":
             if qid != 'AVG':
                 if args.track == 'mb15':
                     qid = 'MB' + qid
-                if args.track == 'rts16':
-                    qid = 'RTS' + qid
-                
+                                
                 if qid not in findables:
+                    # print >> sys.stderr, '{} not in findables'.format(qid)
                     continue
 
             if qid == 'AVG':

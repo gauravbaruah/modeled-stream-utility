@@ -22,7 +22,7 @@ function makeplots {
     
 }
 
-for track in ts13 ts14 mb15 ; do
+for track in ts13 ts14 mb15 rts16; do
 #for track in rts16; do
     # we only have the only.push mode for SIGIR2017 short submission
     #for mode in only.push only.pull push.pull; do
