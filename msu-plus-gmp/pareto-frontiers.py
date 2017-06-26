@@ -36,7 +36,32 @@ def plot_graph(points, colorcodes, title_text, frontier):
         #             xytext=(1000, 0.1), textcoords='data')
         #         continue        
         plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=12, verticalalignment='top')
+    
+    xmin, xmax = plt.xlim()
+    ymin, ymax = plt.ylim()
+
+    plt.xlim(0, xmax)
+    plt.ylim(0, ymax)
+    
+    ax = plt.gca()
+
+    if track == 'TS14':       
+       pass
+
+    if track == 'MB15':
+        y_major_ticks = np.arange(0, .25, 0.05) 
+        ax.set_yticks(y_major_ticks)        
+    
+    if track == 'RTS16':
+        plt.xlim(0, 40)
+        plt.ylim(0, ymax)
+        y_major_ticks = np.arange(0, .180, 0.05) 
+        ax.set_yticks(y_major_ticks)
+        
+
     plt.grid(linestyle='dotted', linewidth='1')
+
+
     plt.tight_layout()
     return fig
 
@@ -141,9 +166,8 @@ def make_paper_plots(multi_fronts, mode):
     track = multi_fronts[0][1][:multi_fronts[0][1].index(': ')]
 
     # plt.title( track + ": {} ".format(mode) + 'Pareto frontiers')
-    plt.title( track + ": " + 'Pareto frontiers', fontsize=18)
-    plt.grid(linestyle='dotted', linewidth='1')    
-
+    plt.title( track + ": " + 'Pareto Frontiers', fontsize=18)
+    
     multi_fronts.sort(key=lambda x: (float(x[1].split(';')[0].split('=')[1]), int(x[1].split(';')[1].split('.')[2])))
 
     colors = ['orange', 'green', 'black']
@@ -151,6 +175,7 @@ def make_paper_plots(multi_fronts, mode):
     if mode == 'only.push':
         linestyles = ['solid'] * 3
 
+    
     lsi = 0
     for frontier, paramstring in multi_fronts:
 
@@ -183,13 +208,29 @@ def make_paper_plots(multi_fronts, mode):
         lsi += 1
     
     xmin, xmax = plt.xlim()
+    ymin, ymax = plt.ylim()
     if xmax > 250:
         plt.xlim( 0, 250 )
 
-    if track == 'TS14':
-       plt.ylim( 0, .5 )
+    ax = plt.gca()
 
-    ymin, ymax = plt.ylim()
+    if track == 'TS14':
+       plt.ylim( 0, .35 )
+       plt.xlim( 0, 200 )
+    
+    if track == 'MB15':
+        plt.ylim(0, 0.225)
+        plt.xlim(0, 40)
+        y_major_ticks = np.arange(0, .225, 0.05) 
+        ax.set_yticks(y_major_ticks)
+    
+    if track == 'RTS16':
+        plt.xlim(0, 40)
+        plt.ylim(0, ymax)
+        y_major_ticks = np.arange(0, .25, 0.05) 
+        ax.set_yticks(y_major_ticks)
+        
+    plt.grid(linestyle='dotted', linewidth='1')
 
     # plt.plot([0, ymax-1e-8], [0, ymax], c='blue', ls='dotted')
     
@@ -305,8 +346,9 @@ if __name__ == '__main__':
 
                 # for the paper: TODO: remove later
                 track, params = plot_title.split(':')
-                params = params.split(';')[:1][0].strip()
-                plot_title = r'{} ({}): All Systems'.format(track, params)
+                # params = params.split(';')[:1][0].strip()
+                # params = params.replace('p', 'persistence')
+                plot_title = r'{}: All Systems'.format(track)
                 print(plot_title)
                 
                 gvp_plot = plot_graph(gain_pain_points, 'go', plot_title, frontier)
