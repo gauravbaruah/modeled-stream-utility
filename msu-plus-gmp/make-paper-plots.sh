@@ -39,11 +39,11 @@ pushd ${directory}
 
     for f in `find . -name *pdf`; do
         fname=`echo $f | sed 's_^./__g' | sed 's_/_-_g'`;
-        cp $f ~/HOME/large-local-work/TREC-Microblog-papers-Jimmy/papers/SIGIR2017/ts-eval/figures/$fname
+        cp $f ~/HOME/large-local-work/github.com/lintool/fourdrinier/papers/ICTIR2017/ts-eval/figures/$fname
     done
 
 popd
 
-cp results/*-p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.pdf ~/HOME/large-local-work/TREC-Microblog-papers-Jimmy/papers/SIGIR2017/ts-eval/figures/  
+cp results/*-p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.pdf ~/HOME/large-local-work/github.com/lintool/fourdrinier/papers/ICTIR2017/ts-eval/figures/  
 
 echo 'DONE!'

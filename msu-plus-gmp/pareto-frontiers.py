@@ -17,31 +17,41 @@ def plot_graph(points, colorcodes, title_text, frontier):
     #ax = fig.add_subplot(111)
 
     #plt.tight_layout()
+    plt.tick_params(labelsize=12)
 
     plot_x, plot_y, rnames = zip(*points)
 
     plt.plot(plot_x, plot_y, colorcodes)
-    plt.ylabel('gain')
-    plt.xlabel('pain')
-    plt.title(title_text)
+    plt.ylabel('Gain', fontsize=15)
+    plt.xlabel('Pain', fontsize=15)
+    plt.title(title_text, fontsize=18)
 
     fX, fY, fnames = zip(*frontier)
     plt.plot(fX, fY)
     for i, fname in enumerate(fnames):
-        plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=10, verticalalignment='top')
+        # if 'TS14' in title_text:
+        #     if 'Q0' in fname:
+        #         plt.annotate(fname.replace('input.', ''), fontsize=12, 
+        #             xy=(fX[i], fY[i]), xycoords='data',
+        #             xytext=(1000, 0.1), textcoords='data')
+        #         continue        
+        plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=12, verticalalignment='top')
+    plt.grid(linestyle='dotted', linewidth='1')
     plt.tight_layout()
     return fig
+
 
 def plot_multiple_pareto_frontiers(multi_fronts, colorcodes):
     fig = plt.figure()
     
+    plt.tick_params(labelsize=12)
 
-    plt.ylabel('gain')
-    plt.xlabel('pain')
+    plt.ylabel('gain', fontsize=15)
+    plt.xlabel('pain', fontsize=15)
 
     track = multi_fronts[0][1][:multi_fronts[0][1].index(': ')]
 
-    plt.title( track + ": " + 'Pareto frontiers')
+    plt.title( track + ": " + 'Pareto frontiers', fontsize=20)
 
     multi_fronts.sort(key=lambda x: int(x[1].split(';')[1].split('.')[2]))
 
@@ -53,7 +63,7 @@ def plot_multiple_pareto_frontiers(multi_fronts, colorcodes):
         plt.plot(fX, fY, marker='o', label='; '.join([p,A]) )
         #plt.plot(fX, fY, colorcodes)
         for i, fname in enumerate(fnames):
-            plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=8, verticalalignment='top')
+            plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=12, verticalalignment='top')
     plt.legend(loc='lower right')
     plt.tight_layout()
     return fig
@@ -109,7 +119,7 @@ def draw_inset_plot(ax, inset_frontier, mode, track):
         xstep = 5
         ystep = 2
     
-    print  track, x1, x2, y1, y2 
+    print ( track, x1, x2, y1, y2 )
 
     ax_inset.set_xlim(x1, x2)
     ax_inset.set_ylim(y1, y2)
@@ -122,13 +132,17 @@ def draw_inset_plot(ax, inset_frontier, mode, track):
 def make_paper_plots(multi_fronts, mode):
 
     fig = plt.figure()
+    
+    plt.tick_params(labelsize=12)
 
-    plt.ylabel('gain')
-    plt.xlabel('pain')
+    plt.ylabel('Gain', fontsize=15)
+    plt.xlabel('Pain', fontsize=15)
 
     track = multi_fronts[0][1][:multi_fronts[0][1].index(': ')]
 
-    plt.title( track + ": {} ".format(mode) + 'Pareto frontiers')
+    # plt.title( track + ": {} ".format(mode) + 'Pareto frontiers')
+    plt.title( track + ": " + 'Pareto frontiers', fontsize=18)
+    plt.grid(linestyle='dotted', linewidth='1')    
 
     multi_fronts.sort(key=lambda x: (float(x[1].split(';')[0].split('=')[1]), int(x[1].split(';')[1].split('.')[2])))
 
@@ -164,7 +178,7 @@ def make_paper_plots(multi_fronts, mode):
         for i, fname in enumerate(fnames):
             if lsi == 0:
                 continue
-            plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=10, verticalalignment='top', color=colors[ lsi%3 if mode == 'only.push' else lsi/3 ])
+            plt.text(fX[i], fY[i], fname.replace('input.', ''), fontsize=12, verticalalignment='top', color=colors[ lsi%3 if mode == 'only.push' else lsi/3 ])
             # print '{:.3f}\t{:.3f}\t{}\t{}'.format(fY[i], fX[i], fY[i] >= fX[i], fname)
         lsi += 1
     
@@ -188,7 +202,7 @@ def make_paper_plots(multi_fronts, mode):
     # ax_inset = inset_axes(ax, width='30%', height='30%', loc=4)
     draw_inset_plot(ax, multi_fronts[0], mode, track)
    
-        
+    
     plt.tight_layout()
     
     return fig
@@ -198,7 +212,7 @@ def get_pareto_frontier(points):
 
     points.sort()
     frontier = [points[0]]
-    for i in xrange(1, len(points)):
+    for i in range(1, len(points)):
         if points[i][1] > frontier[-1][1]:
             frontier.append(points[i])
     return frontier
@@ -227,18 +241,18 @@ if __name__ == '__main__':
     ap.add_argument('gain_vs_pain_input_files', nargs='+')
     args = ap.parse_args()
 
-    print args
+    print (args)
 
     if args.paper_plots:
         args_error = False
         if not args.mode:
-            print 'ERROR: --mode needed with --paper_plots'
+            print( 'ERROR: --mode needed with --paper_plots')
             args_error = True
         if args.mode == 'only.push' and len(args.gain_vs_pain_input_files) != 3:
-            print 'ERROR: --mode only.push needs 3 gain_vs_pain_input_files {0.1 0.5 0.9}'
+            print ('ERROR: --mode only.push needs 3 gain_vs_pain_input_files {0.1 0.5 0.9}')
             args_error = True
         if args.mode in ['only.pull', 'push.pull'] and len(args.gain_vs_pain_input_files) != 9:
-            print 'ERROR: --mode {} needs 9 gain_vs_pain_input_files {0.1 0.5 0.9} x {5m, 1h, 6h}'.format(args.mode)
+            print( 'ERROR: --mode {} needs 9 gain_vs_pain_input_files {0.1 0.5 0.9} x {5m, 1h, 6h}'.format(args.mode))
             args_error = True
         if args_error:
             sys.exit()
@@ -263,11 +277,11 @@ if __name__ == '__main__':
 
             gain_pain_points.sort()
 
-            print gain_pain_points
+            print( gain_pain_points)
 
             frontier = get_pareto_frontier(gain_pain_points)
             for p, g, run in frontier:
-                print p, g, run
+                print (p, g, run)
                 if run not in frontier_fractions:
                     frontier_fractions[run] = [1, g, p, 1]
                 else:
@@ -279,18 +293,22 @@ if __name__ == '__main__':
             plot_title, plot_output_file = get_plot_data(gvp_file, args.track, args.plot_output_folder)
 
             if args.multiple_pareto_fronts:
-                print plot_title
+                print (plot_title)
                 multi_fronts.append( (frontier, plot_title) ) # the frontier and the param settings in the plot_title
 
             if args.plot_output_folder and not args.multiple_pareto_fronts:               
                 
+                print(plot_title)
+
                 if 'only.push' in plot_title:
                     plot_title = plot_title.replace('.21600', '')                           
 
                 # for the paper: TODO: remove later
-                plot_title = '; '.join(plot_title.split(';')[:2]) + ' Pareto frontier'
-                plot_title = plot_title.replace('A=', '')
-
+                track, params = plot_title.split(':')
+                params = params.split(';')[:1][0].strip()
+                plot_title = r'{} ({}): All Systems'.format(track, params)
+                print(plot_title)
+                
                 gvp_plot = plot_graph(gain_pain_points, 'go', plot_title, frontier)
 
                 pp = PdfPages(plot_output_file)
@@ -309,8 +327,8 @@ if __name__ == '__main__':
     num_param_sets = float(len(args.gain_vs_pain_input_files))
     front_avg = dict(map(lambda x: (x[0], [x[1][0]/num_param_sets, x[1][1]/x[1][3], x[1][2]/x[1][3]]), frontier_fractions.items()))
 
-    print '{}\t{}\t{}\t{}'.format('run', 'front_frac', 'avg_front_gain', 'avg_front_pain')
-    for run, data in sorted(front_avg.iteritems(), key=lambda x: (-x[1][0], -x[1][1], x[1][2])):
+    print ('{}\t{}\t{}\t{}'.format('run', 'front_frac', 'avg_front_gain', 'avg_front_pain'))
+    for run, data in sorted(front_avg.items(), key=lambda x: (-x[1][0], -x[1][1], x[1][2])):
         frontfrac, ave_g, ave_p = data
-        print '{}\t{:.3f}\t{:.3f}\t{:.3f}'.format(run, frontfrac, ave_g, ave_p)
+        print ('{}\t{:.3f}\t{:.3f}\t{:.3f}'.format(run, frontfrac, ave_g, ave_p))
 
