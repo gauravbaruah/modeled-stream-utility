@@ -109,7 +109,7 @@ class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
         # generated every time this function is called
         self.population_model.reset_random_seed()
 
-        for ui in xrange(self.num_users):
+        for ui in range(self.num_users):
             A, P, V, L = self.population_model.generate_user_params()
             if self.fix_persistence:
                 P = self.fix_persistence            
@@ -200,7 +200,7 @@ if __name__ == '__main__':
         # this helps to start every duration with 0                
         logger.warning('getting topic query durations')
         query_durns = utils.get_topic_query_durations(args.track_topics_file, args.track)    
-        for topic, durn in query_durns.iteritems():
+        for topic, durn in query_durns.items():
             print (topic, float(durn[1] - durn[0]), file=sys.stderr)
         #sys.exit()
             
@@ -295,7 +295,7 @@ if __name__ == '__main__':
             ignored_qid = "7" if args.track == "ts13" else ""
             if ignored_qid in run:
                 run.pop(ignored_qid)
-        except Exception, e:
+        except Exception as e:
             logger.error('ERROR: could not load runfile ' + runfile)
             logger.error('EXCEPTION: ' + str(e))
             exit(0)
@@ -309,7 +309,7 @@ if __name__ == '__main__':
         if args.track in ["ts13", "mb15"]:
             # print in sorted qid order when topic ids are numeric
             keys = filter(lambda x: x.isdigit(), run_msu.keys())
-            printkeys = map(str,sorted(map(int, keys))) + ["AVG"]
+            printkeys = list(map(str,sorted(map(int, keys)))) + ["AVG"]
         elif args.track in ['ts14', 'rts16']:
             # print in sorted qid order when topic ids are strings
             keys = filter(lambda x: x != 'AVG' , run_msu.keys())

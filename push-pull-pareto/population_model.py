@@ -27,7 +27,7 @@
 import sys
 import numpy
 
-from exceptions import NotImplementedError
+#from exceptions import NotImplementedError
 from probability_distributions import Lognormal
 from probability_distributions import Beta
 
@@ -154,7 +154,7 @@ if __name__ == "__main__":
 
     population = LognormalAwayPersistenceSessionsPopulationModel(1234, M_A, S_A, [a,b], L)
 
-    for i in xrange(10):
+    for i in range(10):
         print (population.generate_user_params())
 
 
@@ -165,7 +165,7 @@ if __name__ == "__main__":
     # print population.lnorm_away.mean_mu
     # print population.lnorm_away.stddev_sigma
 
-    # for i in xrange(50):
+    # for i in range(50):
     #     print population.generate_user_params()
 
     
@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
     # population = LognormalPopulationModel(1234, M_A, S_A, M_D, S_D, L)
 
-    # for i in xrange(50):
+    # for i in range(50):
     #     print population.generate_user_params()
 
         

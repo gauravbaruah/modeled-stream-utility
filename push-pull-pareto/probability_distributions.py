@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     # exponential = Exponential(2)
 
-    # for x in xrange(10):
+    # for x in range(10):
     #     print exponential.get_random_sample()
 
     # randexp = exponential.get_random_samples(10)
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     a, b = float(sys.argv[1]), float(sys.argv[2])
     beta = Beta(a, b)
 
-    for x in xrange(10):
+    for x in range(10):
         print (beta.get_random_sample())
 
     randbeta = beta.get_random_samples(10)

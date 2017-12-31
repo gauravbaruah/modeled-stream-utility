@@ -33,5 +33,5 @@ if __name__ == "__main__":
     
     topic_query_durations = get_topic_query_durations(args.topic_test_xml_file)
     
-    for qid, times in topic_query_durations.iteritems():
+    for qid, times in topic_query_durations.items():
         print (qid, times[0], times[1])

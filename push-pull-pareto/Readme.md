@@ -7,11 +7,11 @@ In this project, we extend the gain-vs-pain pareto frontier experiments as follo
 3. ? We also experiment with different presentation/interaction models (chrono, ranked, reverse-chrono updates)
 4. ? latency in a 3D pareto front
 5. ? We experiment with differing levels of verbosity (binary vs true vs estimated); true verbosity may vastly increase pain
-6. ? what about including vs. not including runs in the pool
+6. ? what about including vs. not including sentences in the pool
 
 ### TODOs
-- convert code to python 3
-- run code and check that results are same as previous
+-DONE convert code to python 3
+-DONE run code and check that results are same as previous
 - write in code for only pull scenario
 - use cluster qrels for TS 13 and TS 14
     - for push and pull 

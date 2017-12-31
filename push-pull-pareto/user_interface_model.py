@@ -134,7 +134,7 @@ class RankedInterfaceMixin(UserInterfaceMixin):
         u = oldest_available_update_index
         v = most_recent_update_index
         
-        for i in xrange(u, v+1):
+        for i in range(u, v+1):
             update = updates[i]
             if update.updid not in self.added_to_heap:
                 heapq.heappush(self.conf_heap, (-update.conf, update.time, update.updid, i))
@@ -226,7 +226,7 @@ class PushRankedInterfaceMixin(RankedInterfaceMixin):
 
         if interaction_mode == 'only.push' or interaction_mode =='push.pull':
             # push notification sessions
-            for ui in xrange(len(update_confs)):
+            for ui in range(len(update_confs)):
                 if update_confs[ui] >= push_threshold:
                     num_read = 0
                     while np.random.random() < user_instance.P:  
@@ -263,7 +263,7 @@ if __name__ == "__main__":
         #for s in sorted(updates, key=attrgetter('time', 'conf', 'updid')):
         #    print s
 
-        for ui in xrange(0, len(updates), 10):
+        for ui in range(0, len(updates), 10):
 
             # reverse order
             for si in reverse.update_presentation_order(ui, ui+9, updates):

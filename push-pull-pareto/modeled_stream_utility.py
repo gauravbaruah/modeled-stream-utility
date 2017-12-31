@@ -113,8 +113,10 @@ class ModeledStreamUtility(object):
         qids_matched = defaultdict(int)
         qids_ignored = defaultdict(int)
         with gzip.open(runfile) as rf:
+            # print("file opened")
             for line in rf:                                
-                
+                line = line.decode('utf-8')
+                # print(line)
                 qid, tweet, epoch, runtag = line.strip().split()
                 
                 if track == 'mb15':
@@ -145,7 +147,7 @@ class ModeledStreamUtility(object):
                 if qid not in run:
                     run[qid] = []
                 run[qid].append(updobj) 
-
+        # print("done reading file")
         # print len(qids_matched),qids_matched
         # print len(qids_ignored),qids_ignored
         return run
@@ -303,7 +305,7 @@ class ModeledStreamUtility(object):
         # compute average MSU per topic for each user
         user_msu_per_topic = np.zeros(self.num_users, dtype=float)
         user_pain_per_topic = np.zeros(self.num_users, dtype=float)
-        for u in xrange(self.num_users):
+        for u in range(self.num_users):
             user_msu_per_topic[u] = np.mean(msu_user_topic[u], dtype=float)
             user_pain_per_topic[u] = np.mean(pain_user_topic[u], dtype=float)
         ##user_msu_per_topic = np.mean(msu_user_topic, dtype=float, axis=1)
@@ -369,7 +371,7 @@ class MSUReverseChronoOrder(ModeledStreamUtility, \
         self.population_model.reset_random_seed()
             
         # sampling user params for one user at a time
-        for ui in xrange(self.num_users):
+        for ui in range(self.num_users):
             A, D, V, L = self.population_model.generate_user_params()
             self.sampled_users.append(UserModel(A,D,V,L))         
             # with open('debugging/py.all.users', 'w') as utf:
@@ -550,7 +552,7 @@ if __name__ == "__main__":
     # this helps to start every duration with 0                
     logger.warning('getting topic query durations')
     query_durns = utils.get_topic_query_durations(args.track_topics_xml, args.track)
-    for topic, durn in query_durns.iteritems():
+    for topic, durn in query_durns.items():
         print (topic, float(durn[1] - durn[0]), file=sys.stderr)
     #sys.exit()
         
@@ -591,7 +593,7 @@ if __name__ == "__main__":
             ignored_qid = "7" if args.track == "ts13" else ""
             if ignored_qid in run:
                 run.pop(ignored_qid)
-        except Exception, e:
+        except Exception as e:
             logger.error('ERROR: could not load runfile' + runfile)
             logger.error('EXCEPTION: ' + str(e))
             exit(0)

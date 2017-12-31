@@ -13,7 +13,6 @@ from libcpp.vector cimport vector
 import numpy
 
 
-from sys import maxint
 
 # import logging
 # logger = logging.getLogger(__name__)
@@ -46,7 +45,7 @@ cdef class UpdateHeap:
 
     def __init__(self, int heap_size_limit):
         
-        for i in xrange(2*heap_size_limit):
+        for i in range(2*heap_size_limit):
             self.minheap.push_back(UpdateData(float("inf"),float("inf"), 2**31-1,float("inf")))
             self.maxheap.push_back(UpdateData(float("-inf"), float("-inf"), -(2**31-1), float("-inf")))
         self.heap_size = 0
@@ -109,7 +108,7 @@ cdef class UpdateHeap:
     cdef re_minheapify(self, double time_filter):
         self.heap_size = 0        
         cdef num_filtered = 0
-        for i in xrange(1, self.max_heap_size+1):
+        for i in range(1, self.max_heap_size+1):
             if self.maxheap[i].time > time_filter:                
                 self.insert(self.maxheap[i])
             else:
@@ -163,7 +162,7 @@ cdef class UpdateHeap:
             i = sc
 
     cdef maxheapify(self):        
-        for i in xrange(1, self.heap_size+1):
+        for i in range(1, self.heap_size+1):
             self._insert_max(self.minheap[i])
         # assert(self.heap_size == self.max_heap_size)
 
@@ -232,7 +231,7 @@ cdef tuple process_session(updates_read, already_seen_ngts, updates,
     cdef int ngt_after = 0
     cdef double ngt_msu = 0.0
 
-    #for ai in xrange(len(available_updates)): # for num_reads
+    #for ai in range(len(available_updates)): # for num_reads
     while ssn_reads >0 and topkqueue.max_heap_size > 0:
         # logger.debug('starting to read {}; max_heap_size {}'.format(ssn_reads, topkqueue.max_heap_size))
         ssn_reads -= 1
@@ -290,7 +289,7 @@ cdef int find_max_heap_size(user_trail, window_starts, int num_sessions):
     cdef int heap_size = 0
     cdef int max_heap_size = 0
     # # logger.debug('num_sessions {}'.format(num_sessions))
-    for wi in xrange(num_sessions):
+    for wi in range(num_sessions):
         # # logger.debug('{}, w {}, s {}, check {} {}'.format(wi, window_starts[wi], user_trail[wi], ci, user_trail[ci]))
         heap_size += user_trail[wi][1]
         if max_heap_size < heap_size:
@@ -453,7 +452,7 @@ def _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts,
 #             current_time += time_away 
 
 #     # push notification sessions
-#     for ui in xrange(len(update_confs)):
+#     for ui in range(len(update_confs)):
 #         if update_confs[ui] >= push_threshold:
 #             num_read = 1
 #             while numpy.random.random() < user_P:  
