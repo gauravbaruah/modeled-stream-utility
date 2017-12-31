@@ -13,16 +13,19 @@ In this project, we extend the gain-vs-pain pareto frontier experiments as follo
 -DONE convert code to python 3
 -DONE run code and check that results are same as previous
 - write in code for only pull scenario
-- use cluster qrels for TS 13 and TS 14
-    - for push and pull 
+    - generate results
 - write in code for push-pull spectrum
-    - run the code 
-    - also run it using cluster qrels
-    - ? can we visualize performance over the entire spectrum 
+    - generate results 
+- use cluster qrels for TS 13 and TS 14
+    - generate results
+- visualization of pareto-frontiers
+    - ? can we visualize performance over the entire spectrum  
+    - ? small multiples plots
+    - ? 3D plots
+- ? which systems are on the frontier the most 
 - write in code for interaction models
     - run the code for pull, push, pull-push    
     
-
 #### Software requirements
 - (Anaconda Python 3.6)[https://repo.continuum.io/archive/Anaconda3-5.0.1-Linux-x86_64.sh]
 
