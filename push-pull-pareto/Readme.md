@@ -23,6 +23,7 @@ In this project, we extend the gain-vs-pain pareto frontier experiments as follo
     - ? small multiples plots
     - ? 3D plots
 - ? which systems are on the frontier the most 
+- ? is there a significant difference between the different interaction modalities
 - write in code for interaction models
     - run the code for pull, push, pull-push    
     

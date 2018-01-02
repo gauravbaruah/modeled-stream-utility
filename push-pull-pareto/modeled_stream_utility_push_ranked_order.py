@@ -17,7 +17,7 @@ from update import Update
 from nugget import Nugget
 from population_model import LognormalAwayPersistenceSessionsPopulationModel
 from user_model import LognormalAwayRBPPersistenceUserModel
-from user_interface_model import PushRankedInterfaceMixin
+from user_interface_model import PushPullRankedInterfaceMixin
 
 from modeled_stream_utility import ModeledStreamUtility
 
@@ -45,7 +45,7 @@ def logargs(func):
     return inner
 
 
-class MSUPushRankedOrder(ModeledStreamUtility, PushRankedInterfaceMixin):
+class MSUPushRankedOrder(ModeledStreamUtility, PushPullRankedInterfaceMixin):
     """
     Simulates users reading updates in ranked order at every session.
     Users persist in reading updates at every session based on the RBP user model [Moffat, TOIS 2008]

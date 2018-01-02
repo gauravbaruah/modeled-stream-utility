@@ -232,7 +232,7 @@ cdef tuple process_session(updates_read, already_seen_ngts, updates,
     cdef double ngt_msu = 0.0
 
     #for ai in range(len(available_updates)): # for num_reads
-    while ssn_reads >0 and topkqueue.max_heap_size > 0:
+    while ssn_reads > 0 and topkqueue.max_heap_size > 0:
         # logger.debug('starting to read {}; max_heap_size {}'.format(ssn_reads, topkqueue.max_heap_size))
         ssn_reads -= 1
         

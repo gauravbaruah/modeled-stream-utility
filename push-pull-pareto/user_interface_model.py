@@ -188,13 +188,14 @@ class RankedInterfaceMixin(UserInterfaceMixin):
         assert(len(topkqueue) <= topkcount)
 
     
-class PushRankedInterfaceMixin(RankedInterfaceMixin):
+class PushPullRankedInterfaceMixin(RankedInterfaceMixin):
     """
-    Models an interface where push notifications are sent by the system
-    and the user may then read updates presented in a ranked order
+    Models an interface where, either push notifications are sent by the system, or updates are
+    read by users when they feel like, in any case the updates are presented in a ranked order.
+    NOTE: generate_user_trail(interaction_mode) argument is important!
     """
     def __init__(self):
-        super(PushRankedInterfaceMixin, self).__init__()
+        super(PushPullRankedInterfaceMixin, self).__init__()
         self.conf_heap = []
 
     def update_presentation_order(self, oldest_available_update_index, most_recent_update_index, updates):
