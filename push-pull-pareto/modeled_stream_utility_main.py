@@ -14,8 +14,7 @@ import array
 import re
 
 import utils
-from modeled_stream_utility_push_ranked_order import MSUPushRankedOrder
-from modeled_stream_utility_pull_ranked_order import MSUPullRankedOrder
+from modeled_stream_utility_ranked_order import MSURankedOrder
 
 # logging setup
 import logging
@@ -42,54 +41,16 @@ def get_msu_evaluator_for_interface_and_interaction(args):
     MSU = None
     Apop_mean, Apop_stdev = args.time_away_population_params
 
-    if args.interaction_mode == "only.push":        
-        if args.interface_type == "ranked":
-            MSU = MSUPushRankedOrder(args.num_users, args.persistence_population_params, 
+    if args.interface_type == "ranked":
+        MSU = MSURankedOrder(args.num_users, args.persistence_population_params, 
                     Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
                     args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
                     args.push_threshold, args.interaction_mode)
-        elif args.interface_type == "chrono":
-            MSU = MSUPushChronoOrder(args.num_users, args.persistence_population_params, 
-                    Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
-                    args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
-                    args.push_threshold, args.interaction_mode)
-        elif args.interface_type == "reverse.chrono":
-            MSU = MSUPushReverseOrder(args.num_users, args.persistence_population_params, 
-                    Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
-                    args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
-                    args.push_threshold, args.interaction_mode)
-    elif args.interaction_mode == "only.pull":
-        if args.interface_type == "ranked":
-            MSU = MSUPullRankedOrder(args.num_users, args.persistence_population_params, 
-                    Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
-                    args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
-                    args.push_threshold, args.interaction_mode)
-        elif args.interface_type == "chrono":
-            MSU = MSUPullChronoOrder(args.num_users, args.persistence_population_params, 
-                    Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
-                    args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
-                    args.push_threshold, args.interaction_mode)
-        elif args.interface_type == "reverse.chrono":
-            MSU = MSUPullReverseOrder(args.num_users, args.persistence_population_params, 
-                    Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
-                    args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
-                    args.push_threshold, args.interaction_mode)
-    elif args.interaction_mode == "push.pull":
-        if args.interface_type == "ranked":
-            MSU = MSUPushPullRankedOrder(args.num_users, args.persistence_population_params, 
-                    Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
-                    args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
-                    args.push_threshold, args.interaction_mode)
-        elif args.interface_type == "chrono":
-            MSU = MSUPushPullChronoOrder(args.num_users, args.persistence_population_params, 
-                    Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
-                    args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
-                    args.push_threshold, args.interaction_mode)
-        elif args.interface_type == "reverse.chrono":
-            MSU = MSUPushPullReverseOrder(args.num_users, args.persistence_population_params, 
-                    Apop_mean, Apop_stdev, args.user_latency, args.window_size, 
-                    args.user_persistence, args.user_time_away_mean, args.user_reading_mean, 
-                    args.push_threshold, args.interaction_mode)
+    elif args.interface_type == "chrono":
+        pass
+    elif args.interface_type == "reverse.chrono":
+        pass
+    
     assert(MSU)
     return MSU
 

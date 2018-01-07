@@ -1,12 +1,13 @@
 #!/bin/bash
 
-track=$1
-mode=$2
-outdir=$3
-extra_args=""
+track=$1        # ts13|ts14|mb15|rts16
+mode=$2         # only.push|only.pull|push.pull
+interface=$3    # ranked|chrono|reverse
+outdir=$4       # output folder
+extra_args=""   # "--ignore_verbosity --push_threshold 0.7" (recommended. see extra_args.list for other options)
 
-if [ $# -gt 3 ]; then
-    extra_args="${*:4}"
+if [ $# -gt 4 ]; then
+    extra_args="${@:5}"
 fi
 
 echo $track, $mode, $outdir, $extra_args
@@ -60,15 +61,21 @@ function runeval {
 
         # time python modeled_stream_utility_push-ranked_order.py -n ${datafolder}/qrels/nuggets.tsv -m ${datafolder}/qrels/matches.tsv --poolFile ${datafolder}/qrels/${poolfile} -t ${datafolder}/qrels/${topicsfile} -l ${datafolder}/update-lengths/ -u 1  ${extra_args} --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${track} ${mode} ${datafolder}/submitted-runs/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log
 
-        time python modeled_stream_utility_main.py only.push ranked ts14 -n ${datafolder}/qrels/nuggets.tsv -m ${datafolder}/qrels/matches.tsv --poolFile ${datafolder}/qrels/${poolfile} -t ${datafolder}/qrels/${topicsfile} -l ${datafolder}/update-lengths/ -u 1  ${extra_args} --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${datafolder}/submitted-runs/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log
+        echo "python modeled_stream_utility_main.py ${mode} ${interface} ${track} -n ${datafolder}/qrels/nuggets.tsv -m ${datafolder}/qrels/matches.tsv --poolFile ${datafolder}/qrels/${poolfile} -t ${datafolder}/qrels/${topicsfile} -l ${datafolder}/update-lengths/ -u 1  ${extra_args} --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${datafolder}/submitted-runs/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log"
+
+        time python modeled_stream_utility_main.py ${mode} ${interface} ${track} -n ${datafolder}/qrels/nuggets.tsv -m ${datafolder}/qrels/matches.tsv --poolFile ${datafolder}/qrels/${poolfile} -t ${datafolder}/qrels/${topicsfile} -l ${datafolder}/update-lengths/ -u 1  ${extra_args} --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${datafolder}/submitted-runs/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log
 
         outfiles="$outfiles ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv"    
 
     elif  [ "$track" == "mb15" ] || [ "$track" == "rts16" ] ; then
 
-        echo "python modeled_stream_utility_push-ranked_order.py --matchesFile ${datafolder}/qrels/${qrelfile} --nuggetsFile ${datafolder}/qrels/${clustersfile} --tweetEpochFile ${datafolder}/qrels/${tweet2dayepochfile} -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${extra_args}  ${track} ${mode} ${datafolder}/submitted-runs-scenario-A/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log"
+        #echo "python modeled_stream_utility_push-ranked_order.py --matchesFile ${datafolder}/qrels/${qrelfile} --nuggetsFile ${datafolder}/qrels/${clustersfile} --tweetEpochFile ${datafolder}/qrels/${tweet2dayepochfile} -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${extra_args}  ${track} ${mode} ${datafolder}/submitted-runs-scenario-A/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log"
 
-        time python modeled_stream_utility_push-ranked_order.py --matchesFile ${datafolder}/qrels/${qrelfile} --nuggetsFile ${datafolder}/qrels/${clustersfile} --tweetEpochFile ${datafolder}/qrels/${tweet2dayepochfile} -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${extra_args}  ${track} ${mode} ${datafolder}/submitted-runs-scenario-A/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log
+        #time python modeled_stream_utility_push-ranked_order.py --matchesFile ${datafolder}/qrels/${qrelfile} --nuggetsFile ${datafolder}/qrels/${clustersfile} --tweetEpochFile ${datafolder}/qrels/${tweet2dayepochfile} -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${extra_args}  ${track} ${mode} ${datafolder}/submitted-runs-scenario-A/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log
+
+        echo "python modeled_stream_utility_main.py ${mode} ${interface} ${track} --matchesFile ${datafolder}/qrels/${qrelfile} --nuggetsFile ${datafolder}/qrels/${clustersfile} --tweetEpochFile ${datafolder}/qrels/${tweet2dayepochfile} -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${extra_args} ${datafolder}/submitted-runs-scenario-A/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log"
+
+        time python modeled_stream_utility_main.py ${mode} ${interface} ${track} --matchesFile ${datafolder}/qrels/${qrelfile} --nuggetsFile ${datafolder}/qrels/${clustersfile} --tweetEpochFile ${datafolder}/qrels/${tweet2dayepochfile} -u 1 --user_persistence ${p} --user_reading_mean 4.25 --user_time_away_mean ${away} ${extra_args} ${datafolder}/submitted-runs-scenario-A/* > ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv 2>>${outdir}/${track}.log
         
         outfiles="$outfiles ${outdir}/${track}/p-${p}_A-${mode}.${away}_L-1.0_V-4.25_gmp.tsv"    
 
@@ -76,34 +83,26 @@ function runeval {
 
 }
 
-if [ "$mode" == "only.push" ] ; then
+if [ "$mode" == "only.push" ]; then
 
-    #for p in 0.1 0.3 0.5 0.7 0.9;
-    for p in 0.5;
+    for p in 0.1 0.5 0.9;
     do
         away=$((6*60*60))
         runeval $p $away        
     done
-
-    #python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder ${outdir}/${track}/  > ${outdir}/${track}/${mode}.fronfrac.tsv
-    #pdftk ${outfiles//tsv/pdf} cat output ${outdir}/${track}/${mode}_plots.pdf
-
+   
 fi
 
 if [ "$mode" == "only.pull" ]; then
 
-    for p in 0.1 0.5 0.9 ; 
+    for p in 0.1 0.5 0.9; 
     do
         outfiles=""
-        for away in 5 10 20 30 60 120 180 360;
+        for away in 1 3 6 12 24;
         do 
-            away=$(($away*60))
+            away=$(($away*60*60))
             runeval $p $away
         done
-
-        #python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder ${outdir}/${track}/ --multiple_pareto_fronts ${mode}.P-${p}_multi-pareto.pdf > ${outdir}/${track}/${mode}.P-${p}.fronfrac.tsv
-        #pdftk ${outfiles//tsv/pdf} cat output ${outdir}/${track}/${mode}.P-${p}_plots.pdf
-
     done
 
 fi
@@ -114,15 +113,11 @@ if [ "$mode" == "push.pull" ]; then
     for p in 0.1 0.5 0.9 ; 
     do
         outfiles=""
-        for away in 5 10 20 30 60 120 180 360;
+        for away in 1 3 6 12 24;
         do 
-            away=$(($away*60))
+            away=$(($away*60*60))
             runeval $p $away
         done
-
-        #python pareto-frontiers.py ${track} ${outfiles} --plot_output_folder ${outdir}/${track}/ --multiple_pareto_fronts ${mode}.P-${p}_multi-pareto.pdf > ${outdir}/${track}/${mode}.P-${p}.fronfrac.tsv
-        #pdftk ${outfiles//tsv/pdf} cat output ${outdir}/${track}/${mode}.P-${p}_plots.pdf
-
     done
 
 fi

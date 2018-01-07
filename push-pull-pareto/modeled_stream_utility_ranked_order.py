@@ -9,14 +9,15 @@ from collections import defaultdict
 import operator
 import heapq
 import array
+import re
 
-from cython_computations import _compute_ranked_user_MSU
+from cython_computations import _compute_push_ranked_user_MSU
 
 from update import Update
 from nugget import Nugget
 from population_model import LognormalAwayPersistenceSessionsPopulationModel
 from user_model import LognormalAwayRBPPersistenceUserModel
-from user_interface_model import RankedInterfaceMixin
+from user_interface_model import PushPullRankedInterfaceMixin
 
 from modeled_stream_utility import ModeledStreamUtility
 
@@ -25,8 +26,8 @@ import utils
 # logging setup
 import logging
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.WARNING)
-#logger.setLevel(logging.INFO)
+#logger.setLevel(logging.WARNING)
+logger.setLevel(logging.INFO)
 #logger.setLevel(logging.DEBUG)
 
 
@@ -44,7 +45,7 @@ def logargs(func):
     return inner
 
 
-class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
+class MSURankedOrder(ModeledStreamUtility, PushPullRankedInterfaceMixin):
     """
     Simulates users reading updates in ranked order at every session.
     Users persist in reading updates at every session based on the RBP user model [Moffat, TOIS 2008]
@@ -52,7 +53,13 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
 
     def __init__(self, num_users, RBP_persistence_params, \
         population_time_away_mean, population_time_away_stddev, \
-        pop_lateness_decay, window_size, fix_persistence):
+        lateness_decay, 
+        window_size,
+        fix_persistence, 
+        fix_away_mean, 
+        fix_reading_mean, 
+        push_threshold, 
+        interaction_mode):
 
         super(MSURankedOrder, self).__init__(num_users)
 
@@ -60,20 +67,28 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
                                 population_time_away_mean, \
                                 population_time_away_stddev, \
                                 RBP_persistence_params, \
-                                pop_lateness_decay, )
+                                lateness_decay, )
 
         self.sampled_users = []
         self.update_emit_times = []
         self.update_confidences = []
         self.update_lengths = []                                                                                                    
         self.window_size = window_size
-        self.fix_persistence = fix_persistence
+        self.fix_persistence = fix_persistence        
+        self.fix_reading_mean = fix_reading_mean
+        self.fix_away_mean = fix_away_mean        
+        self.push_threshold = push_threshold
+        self.interaction_mode = interaction_mode 
         self.user_counter = 0
+        self.ignore_verbosity = False
 
     def normalize_confidences(self):
         #logger.warning(self.update_confidences)
         maxconf = max(self.update_confidences)
         minconf = min(self.update_confidences)
+        if maxconf == minconf:
+            maxconf = 1.0
+            minconf = 0.0
         self.update_confidences = array.array('d', map(lambda x: (x - minconf)/(maxconf - minconf), self.update_confidences))
         #logger.warning(self.update_confidences)
 
@@ -97,7 +112,11 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         for ui in range(self.num_users):
             A, P, V, L = self.population_model.generate_user_params()
             if self.fix_persistence:
-                P = self.fix_persistence
+                P = self.fix_persistence            
+            if self.fix_away_mean:
+                A = self.fix_away_mean
+            if self.fix_reading_mean:
+                V = self.fix_reading_mean
             self.sampled_users.append(LognormalAwayRBPPersistenceUserModel(A, P, V, L))
 
     
@@ -108,6 +127,7 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         #     logger.warning('{0} users simulated'.format(self.user_counter))
 
         user_topic_msu = 0.0
+        user_topic_pain = 0.0
 
         # generate user trail
         # - if in case a user reads till the start of the next session.
@@ -116,118 +136,193 @@ class MSURankedOrder(ModeledStreamUtility, RankedInterfaceMixin):
         
         #if self.user_counter == 23:
             #logger.setLevel(logging.DEBUG)
+        #logger.warning('user {}'.format(user_instance))
 
-        user_trail = user_instance.generate_user_trail(self.query_duration)
+        user_trail = self.generate_user_trail(user_instance, self.update_confidences, self.update_emit_times, self.query_duration, self.push_threshold, self.interaction_mode)
         # logger.debug('user_trail {}'.format(user_trail))        
         window_starts = array.array('d', map(lambda x: x[0] - self.window_size if x[0] - self.window_size >= 0.0 else 0.0, user_trail))
         if self.window_size == -1:
             window_starts = array.array('d', [0.0]*len(user_trail)) 
         # logger.debug('window_starts {}'.format(str(window_starts)))
-        ssn_starts = array.array('d', [s for s,r in user_trail])
+        ssn_starts = array.array('d', [s for s,r,t in user_trail])
         # logger.debug('ssn_starts {}'.format(str(ssn_starts)))
         num_sessions = len(user_trail)
 
         
         # logger.debug('----------- user {} {}-------------------'.format(self.user_counter, user_instance))
         
-        user_topic_msu = _compute_ranked_user_MSU(user_trail, window_starts, ssn_starts, 
+        user_topic_msu, user_topic_pain = _compute_push_ranked_user_MSU(user_trail, window_starts, ssn_starts, 
             self.update_emit_times, self.update_confidences, self.update_lengths, updates,
-            user_instance.V, user_instance.L, self.query_duration)
+            user_instance.V, user_instance.L, self.query_duration, self.ignore_verbosity)
         # logger.debug(' user {} done'.format(self.user_counter))
         
-        return user_topic_msu
+        return user_topic_msu, user_topic_pain
 
        
 
 if __name__ == '__main__':
 
     ap = argparse.ArgumentParser(description="computes MSU for systems while presenting a ranked order of updates at each user session")
-    ap.add_argument("track", choices=["ts13", "ts14"])
-    ap.add_argument("matches")
-    ap.add_argument("nuggets")
-    ap.add_argument("pool") 
-    ap.add_argument("track_topics_xml") # to set time to begin at 0 seconds   
-    ap.add_argument("update_lengths_folder", help="should contain \"<qid>*.len\" files containing (qid, updid, charlen, wordlen) columns per line") # update lengths are required for each update    
-    ap.add_argument("num_users", type=int)
-    ap.add_argument("population_time_away_mean", type=float)
-    ap.add_argument("population_time_away_stddev", type=float)
-    ap.add_argument("lateness_decay", type=float)
-    ap.add_argument("--RBP_persistence", nargs=2, type=float, default=[2.0,2.0], \
-        help="models the spread of \"reading persistence\" across the user population via a beta distribution")
-    ap.add_argument("--window_size", type=int, default=86400, help="updates older than window_size from current session will not be shown to user (window_size = -1 --> all updates since start of query duration will be shown)")
+    ap.add_argument("track", choices=["ts13", "ts14", "mb15", "rts16"])
+    ap.add_argument("-m", "--matchesFile", help="the qrel file (for tweets) or the matches file (for updates)")
+    ap.add_argument("-n", "--nuggetsFile", help="the clusters file (for tweets) or the nuggets file (for updates)")
+    ap.add_argument("--poolFile", help="needed for the TS tracks for tracking duplicates and if --restrict_runs_to_pool is active ") 
+    ap.add_argument("-t", "--track_topics_file") # to set time to begin at 0 seconds   
+    ap.add_argument("-l", "--update_lengths_folder", help="should contain \"<qid>*.len\" files containing (qid, updid, charlen, wordlen) columns per line") # update lengths are required for each update    
+    ap.add_argument("--tweetEpochFile", help="tweet2dayepoch file needed for emit times of tweet ")
+    ap.add_argument("-u", "--num_users", type=int, default=1)    
+    ap.add_argument("-Apop", "--time_away_population_params", nargs=2, type=float, help="population time away mean and stddev", default=[10800.0, 5400.0])
+    ap.add_argument("-Ppop", "--persistence_population_params", nargs=2, type=float, help="population RBP persistence mean and stddev", default=[0.2, 0.2])
+    ap.add_argument("-w", "--window_size", type=int, default=86400, help="updates older than window_size from current session will not be shown to user (window_size = -1 --> all updates since start of query duration will be shown)")
+    ap.add_argument("interaction_mode", choices=['only.push', 'only.pull', 'push.pull'], default='push.pull')
     ap.add_argument("runfiles", nargs="+")
-    ap.add_argument("--fix_persistence", type=float)
+    ap.add_argument("--user_persistence", type=float)
+    ap.add_argument("--user_latency", type=float, default=1.0)
+    ap.add_argument("--user_time_away_mean", type=float)
+    ap.add_argument("--user_reading_mean", type=float)    
+    ap.add_argument("--push_threshold", type=float, default=0.0, help="updates over this threshold are sent as push notifications")
+    
+    ap.add_argument("--restrict_runs_to_pool", action="store_true", help="the runs are restricted to their pool contributions")
+    ap.add_argument("--ignore_verbosity", action="store_true", help="ignore verbosity computations i.e. user reading speed does not affect reading of updates", default=False)
 
     # NOTE: population reading speed parameters drawn from [Time Well Spent,
     # Clarke and Smucker, 2014]
 
     args = ap.parse_args()
     print (args, file=sys.stderr)
-    
-
-    # load query durations.
-    # this helps to start every duration with 0                
-    logger.warning('getting topic query durations')
-    query_durns = utils.get_topic_query_durations(args.track_topics_xml, args.track)
-    for topic, durn in query_durns.items():
-        print (topic, float(durn[1] - durn[0]), file=sys.stderr)
-    #sys.exit()
         
-    logger.warning('identify duplicate updates from the pool')
-    # all duplicates have the same relevance judgement.
-    duplicates = utils.read_in_pool_file(args.pool)
-    
-    # ignored topics in the pool
-    if args.track == "ts13":
-        duplicates['7'] = {} 
-        duplicates['9911'] = {} 
+    if args.track in ['ts13', 'ts14']:
+        if None in [args.nuggetsFile, args.matchesFile, args.poolFile, args.update_lengths_folder, args.track_topics_file]:
+            logger.error('arguments -n -m --poolFile -t -l  are needed with track {}'.format(args.track))
+            sys.exit()
+
+        # load query durations.
+        # this helps to start every duration with 0                
+        logger.warning('getting topic query durations')
+        query_durns = utils.get_topic_query_durations(args.track_topics_file, args.track)    
+        for topic, durn in query_durns.items():
+            print (topic, float(durn[1] - durn[0]), file=sys.stderr)
+        #sys.exit()
+            
+        logger.warning('identify duplicate updates from the pool')
+        # all duplicates have the same relevance judgement.
+        pool, duplicates = utils.read_in_pool_file(args.poolFile)
                     
-    # note relevant updates (and their duplicates)
-    # keep track of nuggets present in each relevant update 
-    logger.warning('reading in matches, tracking duplicates')
-    matches = utils.read_in_matches_track_duplicates(args.matches, duplicates)
+        # ignored topics in the pool
+        if args.track == "ts13":
+            duplicates['7'] = {} 
+            duplicates['9911'] = {} 
+                        
+        # note relevant updates (and their duplicates)
+        # keep track of nuggets present in each relevant update 
+        logger.warning('reading in matches, tracking duplicates')
+        matches = utils.read_in_matches_track_duplicates(args.matchesFile, duplicates)
+
+        if args.track == 'ts13':
+            matches.pop('11', None)
+            matches.pop('9911', None)
+            matches.pop('7', None)
+        
+        logger.warning('load nuggets and their timestamp and importance')
+        nuggets = utils.read_in_nuggets(args.nuggetsFile, query_durns)    
+        
+        logger.warning('reading in update lengths')
+        updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
     
-    logger.warning('load nuggets and their timestamp and importance')
-    nuggets = utils.read_in_nuggets(args.nuggets, query_durns)    
-       
-    logger.warning('reading in update lengths')
-    updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
+    if args.track in ['mb15', 'rts16']:
+        if None in [args.nuggetsFile, args.matchesFile, args.tweetEpochFile]:
+            logger.error('arguments -n -m --tweetEpochFile are needed with track {}'.format(args.track))
+            sys.exit()
+
+        # read in qrels
+        logger.warning('reading in qrels')
+        matches = utils.microblog_read_in_qrels(args.matchesFile)
+
+        logger.warning('set topic query durations')
+        query_durns = utils.microblog_set_topic_query_durations(matches.keys(), args.track)    
+
+        logger.warning('reading in tweet emit times (epoch)')
+        tweet_emit_times = utils.microblog_read_int_tweet_epochs(args.tweetEpochFile)
+                    
+        logger.warning('load clusters and get their earliest timestamp ')
+        nuggets = utils.microblog_read_in_clusters(args.nuggetsFile, query_durns, matches, tweet_emit_times, args.track)    
+        
+        logger.warning('reading in update lengths --> Not Applicable for this track')
+        # updlens = utils.read_in_update_lengths(args.update_lengths_folder, args.track)    
+        
+        args.push_threshold = 0.0
+
+    logger.warning('track {}. number of keys {}'.format(args.track, len(matches.keys())))
+    #logger.warning('track {}. number of nuggets for topics \n{}'.format(args.track, '\n'.join(['{}\t{}'.format(qid, len(nuggets)) for qid, nuggets in nuggets.items()])))
     
-    MSU = MSURankedOrder(args.num_users,
-            args.RBP_persistence,
-            args.population_time_away_mean, args.population_time_away_stddev,
-            args.lateness_decay,
-            args.window_size,
-            args.fix_persistence)
+    Apop_mean, Apop_stdev = args.time_away_population_params
+    
+    MSU = MSUPushRankedOrder(args.num_users,
+            args.persistence_population_params,
+            Apop_mean, Apop_stdev,
+            args.user_latency,
+                args.window_size,
+            args.user_persistence,            
+            args.user_time_away_mean,
+            args.user_reading_mean, 
+            args.push_threshold,
+            args.interaction_mode)
+
+    MSU.track = args.track
+    MSU.ignore_verbosity = args.ignore_verbosity
     
     run = {}
     for runfile in args.runfiles:
         run.clear()
         run = {}
-        gc.collect()        
+        gc.collect()   
+        if args.track == 'rts16' and os.path.splitext(os.path.basename(runfile))[0] in ['iitbhu-15']:
+            logger.warning('ignoring bad run {}. See TREC-RTS-Tracks/2016/scenarioA/eval-scripts/README.txt'.format(runfile))
+            continue
+        if args.track == 'mb15' and  os.path.splitext(os.path.basename(runfile))[0] in ['DALTRECAA1', 'DALTRECMA1', 'DALTRECMA2']:
+            logger.warning('ignoring bad run {}. Run has too many tweets --> bad for analysis'.format(runfile))
+            continue
+
         logger.warning('loading runfile ' + runfile )
-        try: 
-            run = MSU.load_run_and_attach_gain(runfile, updlens, nuggets, matches, True, args.track, query_durns) #args.useAverageLengths)
+        try:            
+            run = None
+            if args.track in ['ts13', 'ts14']:
+                run = MSU.load_run_and_attach_gain(runfile, updlens, nuggets, matches, True, args.track, query_durns, pool, args.restrict_runs_to_pool) 
+            elif args.track in ['mb15', 'rts16']:
+                run = MSU.microblog_load_run_and_attach_gain(runfile, nuggets, matches, args.track, query_durns)
+            
+            logger.warning('run total updates {} in {} topics'.format(sum([len(v) for v in run.values()]), len(run)))
             ignored_qid = "7" if args.track == "ts13" else ""
             if ignored_qid in run:
                 run.pop(ignored_qid)
         except Exception as e:
-            logger.error('ERROR: could not load runfile' + runfile)
+            logger.error('ERROR: could not load runfile ' + runfile)
             logger.error('EXCEPTION: ' + str(e))
             exit(0)
 
-        logger.warning('computing MSU...')
-        run_msu = MSU.compute_population_MSU(run, query_durns)
+               
+        logger.warning('computing MSU... for {} topics'.format(len(matches.keys())))
+        run_msu, run_pain = MSU.compute_population_MSU(run, query_durns, len(matches.keys()))
         # TODO: keep track of all the nuggets found
         
         printkeys = None
-        if args.track == "ts13":
+        if args.track in ["ts13", "mb15"]:
+            # print in sorted qid order when topic ids are numeric
             keys = filter(lambda x: x.isdigit(), run_msu.keys())
-            printkeys = map(str,sorted(map(int, keys))) + ["AVG"]
-        elif args.track == 'ts14':
-            keys = filter(lambda x: x != 'AVG', run_msu.keys())
-            printkeys = sorted(keys) + ['AVG']
+            printkeys = list(map(str,sorted(map(int, keys)))) + ["AVG"]
+        elif args.track in ['ts14', 'rts16']:
+            # print in sorted qid order when topic ids are strings
+            keys = filter(lambda x: x != 'AVG' , run_msu.keys())
+            printkeys = sorted(keys, key=lambda x: int(re.findall(r'\d+', x)[0]) ) + ['AVG']
+        
         
         for topic in printkeys:
             msu = run_msu[topic]
-            print ('%s\t%s\t%s' % (os.path.basename(runfile), str(topic), str(msu)))
+            pain = run_pain[topic]
+            runname = os.path.basename(runfile)
+            if args.track == 'ts13':
+                runname = runname.replace("input.", '')
+            if args.track in ['mb15', 'rts16']:
+                runname = os.path.splitext(runname)[0]
+                
+            print ('{}\t{}\t{:.3f}\t{:.3f}'.format(runname, topic, msu, pain))

@@ -12,7 +12,7 @@ from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
 import numpy as np
 
-def plot_graph(points, colorcodes, title_text, frontier):
+def plot_graph(points, colorcodes, title_text, frontier, track):
     fig = plt.figure()
     #ax = fig.add_subplot(111)
 

@@ -19,8 +19,16 @@ fi
 
 echo $track, $datafolder
 
-#for p in 1 5 9; 
-for p in 5; 
+for tsv in `find $resultsFolder/$track -name "*tsv"`;
 do 
-    python normalize-gain-pain.py $track ../data/$datafolder/qrels/$findable $resultsFolder/$track/p-0.${p}_A-only.push.21600_L-1.0_V-4.25_gmp.tsv > $resultsFolder/$track/norm_p-0.${p}_A-only.push.21600_L-1.0_V-4.25_gmp.tsv; 
+    bname=`basename $tsv`
+    dname=`dirname $tsv`
+    echo $dname/$base
+    python normalize-gain-pain.py $track ../data/$datafolder/qrels/$findable $dname/$bname > $dname/norm_$bname
 done
+
+# #for p in 1 5 9; 
+# for p in 5; 
+# do 
+#     python normalize-gain-pain.py $track ../data/$datafolder/qrels/$findable $resultsFolder/$track/p-0.${p}_A-only.push.21600_L-1.0_V-4.25_gmp.tsv > $resultsFolder/$track/norm_p-0.${p}_A-only.push.21600_L-1.0_V-4.25_gmp.tsv; 
+# done

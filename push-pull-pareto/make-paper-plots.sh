@@ -17,21 +17,22 @@ function makeplots {
     if [ "$mode" == "only.push" ]; then
         
         # multi front plot
-        $debug python pareto-frontiers.py ${track} --plot_output_folder ${directory}/${track} --paper_plots --mode ${mode} --multiple_pareto_fronts ${mode}-multi.front.pdf ${directory}/${track}/norm_p-0.[159]_A-${mode}.*tsv
+        $debug python pareto_frontiers.py ${track} --plot_output_folder ${directory}/${track} --paper_plots --mode ${mode} --multiple_pareto_fronts ${mode}-multi.front.pdf ${directory}/${track}/norm_p-0.[159]_A-${mode}.*tsv
         
         # single front plot for p = 0.5
-        $debug python pareto-frontiers.py ${track} --plot_output_folder ${directory}  ${directory}/${track}/norm_p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.tsv
+        $debug python pareto_frontiers.py ${track} --plot_output_folder ${directory}  ${directory}/${track}/norm_p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.tsv
 
         $debug mv ${directory}/norm_p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.pdf ${directory}/${track}-p-0.5_A-only.push.21600_L-1.0_V-4.25_gmp.pdf
 
     else
-        $debug python pareto-frontiers.py ${track} --plot_output_folder ${directory}/${track} --paper_plots --mode ${mode} --multiple_pareto_fronts ${mode}-multi.front.pdf ${directory}/${track}/p-0.[159]_A-${mode}.{300,3600,21600}_*tsv
+        $debug python pareto_frontiers.py ${track} --plot_output_folder ${directory}/${track} --paper_plots --mode ${mode} --multiple_pareto_fronts ${mode}-multi.front.pdf ${directory}/${track}/p-0.[159]_A-${mode}.{300,3600,21600}_*tsv
     fi
     
 }
 
 echo -e "\nGenerating Plots ..."
-for track in ts13 ts14 mb15 rts16; do
+#for track in ts13 ts14 mb15 rts16; do
+for track in ts14; do
     # we only have the only.push mode for SIGIR2017 short submission
     #for mode in only.push only.pull push.pull; do
     #    makeplots $directory $track $mode;
@@ -41,6 +42,8 @@ for track in ts13 ts14 mb15 rts16; do
     makeplots $directory $track ${mode} 
 
 done
+
+exit 0;
 
 echo -e "\nCollating all plots into one .pdf ..."
 pdftk `find ${directory} -name "*pdf" -print0 | xargs -0 echo` cat output ${directory}.pdf
