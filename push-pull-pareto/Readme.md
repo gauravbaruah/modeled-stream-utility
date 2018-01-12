@@ -10,22 +10,31 @@ In this project, we extend the gain-vs-pain pareto frontier experiments as follo
 6. ? what about including vs. not including sentences in the pool
 
 ### TODOs
--DONE convert code to python 3
--DONE run code and check that results are same as previous
-- write in code for only pull scenario
-    - generate results
-- write in code for push-pull spectrum
-    - generate results 
+- [DONE] convert code to python 3
+- [DONE] run code and check that results are same as previous
+- [NA] write in code for only pull scenario
+    - [DONE] generate results
+- [NA] write in code for push-pull spectrum
+    - [DONE] generate results 
 - use cluster qrels for TS 13 and TS 14
     - generate results
-- visualization of pareto-frontiers
+- [ONGOING] visualization of pareto-frontiers
     - ? can we visualize performance over the entire spectrum  
     - ? small multiples plots
-    - ? 3D plots
-- ? which systems are on the frontier the most 
-- ? is there a significant difference between the different interaction modalities
-- write in code for interaction models
-    - run the code for pull, push, pull-push    
+    - [DONE] 3D plots
+    - comparison plots: [A]
+        - systems' gain lines for 3 interaction models
+        - systems' pain lines for 3 interaction models
+        - significant differences if any for gain|pain with different interaction models
+- interface models
+    - chrono|reverse|ranked
+    - comparison plots [repeat [A]]
+    - ? does chrono|reverse interface result in improved gain|pain characterstics over ranked interfaces
+- we have interaction, user, interface models:
+    - ? what is best for which kind of user
+    - ? does the pareto frontier change significantly? if yes, then in how many cases?
+    
+
     
 #### Software requirements
 - (Anaconda Python 3.6)[https://repo.continuum.io/archive/Anaconda3-5.0.1-Linux-x86_64.sh]
@@ -35,21 +44,21 @@ Complex interface models necessitate looping over all submitted updates; looping
 
 ### Data Requirements
 
-```data/```: sibling folder to this folder
-```├── mb-2015/```: **Microblog Track (MB) 2015**
-```│   ├── qrels/```: MB 2015 qrels
-```│   ├── submitted-runs-scenario-A/```: systems' outputs submitted to MB 2015 (download from [TREC](http://trec.nist.gov))
-```├── rts-2016/```: **Real Time Summarization (RTS) 2016**
-```│   ├── qrels/```: RTS 2016 qrels
-```│   └── submitted-runs-scenario-A/```: systems' outputs submitted to RT 2016 (download from [TREC](http://trec.nist.gov))
-```├── ts-2013/```: **Temporal Summarization (TS) Track 2013** 
-```│   ├── qrels/```: TS 2013 qrels
-```│   ├── submitted-runs/```: systems' outputs submitted to TS 2013 (download from [TREC](http://trec.nist.gov))
-```│   └── update-lengths/```: lengths of updates submitted to TS 2013 (download from [here](https://cs.uwaterloo.ca/~gbaruah/ts-2013-update-lengths.html))
-```└── ts-2014/```: **Temporal Summarization Track 2014**
-```    ├── qrels/```: TS 2014 qrels
-```    ├── submitted-runs/```: systems' outputs submitted to TS 2014 (download from [TREC](http://trec.nist.gov))
-```    └── update-lengths/```: (download from [here](https://cs.uwaterloo.ca/~gbaruah/ts-2014-update-lengths.html))
+- ```data/```: sibling folder to this folder
+- ```├── mb-2015/```: **Microblog Track (MB) 2015**
+- ```│   ├── qrels/```: MB 2015 qrels
+- ```│   ├── submitted-runs-scenario-A/```: systems' outputs submitted to MB 2015 (download from [TREC](http://trec.nist.gov))
+- ```├── rts-2016/```: **Real Time Summarization (RTS) 2016**
+- ```│   ├── qrels/```: RTS 2016 qrels
+- ```│   └── submitted-runs-scenario-A/```: systems' outputs submitted to RT 2016 (download from [TREC](http://trec.nist.gov))
+- ```├── ts-2013/```: **Temporal Summarization (TS) Track 2013** 
+- ```│   ├── qrels/```: TS 2013 qrels
+- ```│   ├── submitted-runs/```: systems' outputs submitted to TS 2013 (download from [TREC](http://trec.nist.gov))
+- ```│   └── update-lengths/```: lengths of updates submitted to TS 2013 (download from [here]- (https://cs.uwaterloo.ca/~gbaruah/ts-2013-update-lengths.html))
+- ```└── ts-2014/```: **Temporal Summarization Track 2014**
+- ```    ├── qrels/```: TS 2014 qrels
+- ```    ├── submitted-runs/```: systems' outputs submitted to TS 2014 (download from [TREC](http://trec.nist.gov))
+- ```    └── update-lengths/```: (download from [here](https://cs.uwaterloo.ca/~gbaruah/ts-2014-update-lengths.html))
 
 
 ### Code Layout
